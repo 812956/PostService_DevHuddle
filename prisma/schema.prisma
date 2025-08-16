@@ -1,0 +1,155 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("POSTGRES_PRISMA_URL")
+}
+
+
+enum PostType {
+  TEXT
+  ARTICLE
+  POLL
+}
+
+enum Visibility {
+  PUBLIC
+  CONNECTIONS
+  GROUP // handled as "GROUP:<groupId>" in application logic
+}
+
+enum CommentControl {
+  ANYONE
+  CONNECTIONS
+  NONE
+}
+
+enum ReactionType {
+  LIKE
+  CELEBRATE
+  SUPPORT
+  LOVE
+  INSIGHTFUL
+  CURIOUS
+}
+
+enum TargetType {
+  USER
+  GROUP
+}
+
+model Post {
+  id             String         @id @default(uuid())
+  userId         String
+  type           PostType?      
+  content        String?
+  tags           String[]       @default([])
+  mentions       String[]       @default([])
+  // imageLocation   String?
+  // location        Json?
+  imageUrls      String[]
+  videoUrl       String
+  visibility     Visibility
+  commentControl CommentControl
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  impressions    Int            @default(0)
+
+  // Relations
+  UserFeed  UserFeed[]
+  Comments  Comment[]
+  Shares    Share[]
+  Reactions Reaction[]
+  Poll      Poll?
+
+  @@index([userId])
+  @@index([createdAt])
+  @@index([tags])
+  @@index([mentions])
+}
+
+model UserFeed {
+  userId    String
+  postId    String
+  createdAt DateTime @default(now())
+
+  Post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@id([userId, postId])
+  @@index([createdAt])
+}
+
+model Comment {
+  id              String  @id @default(uuid())
+  postId          String
+  userId          String
+  content         String
+  parentCommentId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  Post          Post      @relation(fields: [postId], references: [id], onDelete: Cascade)
+  ParentComment Comment?  @relation("CommentReplies", fields: [parentCommentId], references: [id])
+  Replies       Comment[] @relation("CommentReplies")
+
+  @@index([postId])
+  @@index([userId])
+  @@index([parentCommentId])
+  @@index([createdAt])
+}
+
+model Share {
+  id         String     @id @default(uuid())
+  postId     String
+  userId     String
+  targetType TargetType
+  targetId   String
+  comment    String?
+  createdAt  DateTime   @default(now())
+
+  Post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@index([postId])
+  @@index([userId])
+  @@index([targetId])
+  @@index([createdAt])
+}
+
+model Reaction {
+  id        String       @id @default(uuid())
+  postId    String
+  userId    String
+  type      ReactionType
+  createdAt DateTime     @default(now())
+
+  Post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, userId, type])
+  @@index([postId])
+  @@index([userId])
+  @@index([createdAt])
+}
+
+model Poll {
+  id        String   @id @default(uuid())
+  postId    String   @unique
+  question  String
+  options   Json[] // [{ id: string, text: string, votes: number }]
+  duration  Int // Duration in days
+  createdAt DateTime @default(now())
+
+  Post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+}
+
+
