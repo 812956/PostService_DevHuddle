@@ -50,6 +50,7 @@ const postController = new feed_controller_1.PostController(postService);
 const postServiceActions = {
     createPost: async (call, callback) => {
         try {
+            console.log('request is comming without any problem .......', call.request);
             const response = await postController.feedPosting(call.request);
             callback(null, response);
         }

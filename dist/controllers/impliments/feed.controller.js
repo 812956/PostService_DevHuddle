@@ -6,10 +6,9 @@ class PostController {
         this.postService = postService;
     }
     async feedPosting(req) {
-        console.log('this is the req data,', req.post);
         await this.postService.createPost(req);
         return {
-            message: "hello "
+            message: "hello ",
         };
     }
 }

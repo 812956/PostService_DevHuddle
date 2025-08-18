@@ -14,7 +14,6 @@ message User {
   string name = 2;
   string avatar = 3;
   optional string title = 4;
-  google.protobuf.Int32Value points = 5;
 }
 
 message ImageTransform {
@@ -49,31 +48,30 @@ message Poll {
   int32 durationDays = 3;
 }
 
+message Transform {
+  oneof data {
+    ImageTransform image = 1;
+    VideoTransform video = 2;
+  }
+}
+
 message Media {
   string id = 1;
   string type = 2;
   string name = 3;
   string url = 4;
   repeated User taggedUsers = 5;
-
-  oneof transform {
-    ImageTransform imageTransform = 6;
-    VideoTransform videoTransform = 7;
-  }
-}
-
-message Post {
-  string content = 1;
-  repeated Media media = 2;
-  optional Poll poll = 3;
-  string visibility = 4;
-  string comment_control = 5;
+  Transform transform = 6;
 }
 
 // Request & Response
 
 message CreatePostRequest {
-  Post post = 1;
+  string content = 1;
+  repeated Media media = 2;
+  optional Poll poll = 3;
+  string visibility = 4;
+  string commentControl = 5;
 }
 
 message CreatePostResponse {

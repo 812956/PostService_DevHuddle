@@ -21,6 +21,8 @@ const postServiceActions: PostServiceServer = {
     callback: grpc.sendUnaryData<CreatePostResponse>
   ) => {
     try {
+
+      console.log('request is comming without any problem .......', call.request)
       const response = await postController.feedPosting(call.request);
       callback(null,response)
     } catch (err: any) {

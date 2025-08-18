@@ -13,6 +13,7 @@ class PostRepository extends base_repository_1.BaseRepository {
     }
     async createPostLogics(data) {
         try {
+            await super.create(data);
         }
         catch (error) {
             logger_util_1.default.error("Error creating entity", {

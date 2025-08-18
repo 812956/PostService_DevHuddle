@@ -5,7 +5,7 @@
 //   protoc               v3.21.12
 // source: post.proto
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.PostServiceClient = exports.PostServiceService = exports.CreatePostResponse = exports.CreatePostRequest = exports.Post = exports.Media = exports.Poll = exports.PollOption = exports.VideoTransform = exports.ImageTransform = exports.User = exports.protobufPackage = void 0;
+exports.PostServiceClient = exports.PostServiceService = exports.CreatePostResponse = exports.CreatePostRequest = exports.Media = exports.Transform = exports.Poll = exports.PollOption = exports.VideoTransform = exports.ImageTransform = exports.User = exports.protobufPackage = void 0;
 /* eslint-disable */
 const wire_1 = require("@bufbuild/protobuf/wire");
 const grpc_js_1 = require("@grpc/grpc-js");
@@ -575,8 +575,80 @@ exports.Poll = {
         return message;
     },
 };
+function createBaseTransform() {
+    return { image: undefined, video: undefined };
+}
+exports.Transform = {
+    encode(message, writer = new wire_1.BinaryWriter()) {
+        if (message.image !== undefined) {
+            exports.ImageTransform.encode(message.image, writer.uint32(10).fork()).join();
+        }
+        if (message.video !== undefined) {
+            exports.VideoTransform.encode(message.video, writer.uint32(18).fork()).join();
+        }
+        return writer;
+    },
+    decode(input, length) {
+        const reader = input instanceof wire_1.BinaryReader ? input : new wire_1.BinaryReader(input);
+        const end = length === undefined ? reader.len : reader.pos + length;
+        const message = createBaseTransform();
+        while (reader.pos < end) {
+            const tag = reader.uint32();
+            switch (tag >>> 3) {
+                case 1: {
+                    if (tag !== 10) {
+                        break;
+                    }
+                    message.image = exports.ImageTransform.decode(reader, reader.uint32());
+                    continue;
+                }
+                case 2: {
+                    if (tag !== 18) {
+                        break;
+                    }
+                    message.video = exports.VideoTransform.decode(reader, reader.uint32());
+                    continue;
+                }
+            }
+            if ((tag & 7) === 4 || tag === 0) {
+                break;
+            }
+            reader.skip(tag & 7);
+        }
+        return message;
+    },
+    fromJSON(object) {
+        return {
+            image: isSet(object.image) ? exports.ImageTransform.fromJSON(object.image) : undefined,
+            video: isSet(object.video) ? exports.VideoTransform.fromJSON(object.video) : undefined,
+        };
+    },
+    toJSON(message) {
+        const obj = {};
+        if (message.image !== undefined) {
+            obj.image = exports.ImageTransform.toJSON(message.image);
+        }
+        if (message.video !== undefined) {
+            obj.video = exports.VideoTransform.toJSON(message.video);
+        }
+        return obj;
+    },
+    create(base) {
+        return exports.Transform.fromPartial(base ?? {});
+    },
+    fromPartial(object) {
+        const message = createBaseTransform();
+        message.image = (object.image !== undefined && object.image !== null)
+            ? exports.ImageTransform.fromPartial(object.image)
+            : undefined;
+        message.video = (object.video !== undefined && object.video !== null)
+            ? exports.VideoTransform.fromPartial(object.video)
+            : undefined;
+        return message;
+    },
+};
 function createBaseMedia() {
-    return { id: "", type: "", name: "", url: "", taggedUsers: [], imageTransform: undefined, videoTransform: undefined };
+    return { id: "", type: "", name: "", url: "", taggedUsers: [], transform: undefined };
 }
 exports.Media = {
     encode(message, writer = new wire_1.BinaryWriter()) {
@@ -595,11 +667,8 @@ exports.Media = {
         for (const v of message.taggedUsers) {
             exports.User.encode(v, writer.uint32(42).fork()).join();
         }
-        if (message.imageTransform !== undefined) {
-            exports.ImageTransform.encode(message.imageTransform, writer.uint32(50).fork()).join();
-        }
-        if (message.videoTransform !== undefined) {
-            exports.VideoTransform.encode(message.videoTransform, writer.uint32(58).fork()).join();
+        if (message.transform !== undefined) {
+            exports.Transform.encode(message.transform, writer.uint32(50).fork()).join();
         }
         return writer;
     },
@@ -649,14 +718,7 @@ exports.Media = {
                     if (tag !== 50) {
                         break;
                     }
-                    message.imageTransform = exports.ImageTransform.decode(reader, reader.uint32());
-                    continue;
-                }
-                case 7: {
-                    if (tag !== 58) {
-                        break;
-                    }
-                    message.videoTransform = exports.VideoTransform.decode(reader, reader.uint32());
+                    message.transform = exports.Transform.decode(reader, reader.uint32());
                     continue;
                 }
             }
@@ -676,8 +738,7 @@ exports.Media = {
             taggedUsers: globalThis.Array.isArray(object?.taggedUsers)
                 ? object.taggedUsers.map((e) => exports.User.fromJSON(e))
                 : [],
-            imageTransform: isSet(object.imageTransform) ? exports.ImageTransform.fromJSON(object.imageTransform) : undefined,
-            videoTransform: isSet(object.videoTransform) ? exports.VideoTransform.fromJSON(object.videoTransform) : undefined,
+            transform: isSet(object.transform) ? exports.Transform.fromJSON(object.transform) : undefined,
         };
     },
     toJSON(message) {
@@ -697,11 +758,8 @@ exports.Media = {
         if (message.taggedUsers?.length) {
             obj.taggedUsers = message.taggedUsers.map((e) => exports.User.toJSON(e));
         }
-        if (message.imageTransform !== undefined) {
-            obj.imageTransform = exports.ImageTransform.toJSON(message.imageTransform);
-        }
-        if (message.videoTransform !== undefined) {
-            obj.videoTransform = exports.VideoTransform.toJSON(message.videoTransform);
+        if (message.transform !== undefined) {
+            obj.transform = exports.Transform.toJSON(message.transform);
         }
         return obj;
     },
@@ -715,19 +773,16 @@ exports.Media = {
         message.name = object.name ?? "";
         message.url = object.url ?? "";
         message.taggedUsers = object.taggedUsers?.map((e) => exports.User.fromPartial(e)) || [];
-        message.imageTransform = (object.imageTransform !== undefined && object.imageTransform !== null)
-            ? exports.ImageTransform.fromPartial(object.imageTransform)
-            : undefined;
-        message.videoTransform = (object.videoTransform !== undefined && object.videoTransform !== null)
-            ? exports.VideoTransform.fromPartial(object.videoTransform)
+        message.transform = (object.transform !== undefined && object.transform !== null)
+            ? exports.Transform.fromPartial(object.transform)
             : undefined;
         return message;
     },
 };
-function createBasePost() {
+function createBaseCreatePostRequest() {
     return { content: "", media: [], poll: undefined, visibility: "", commentControl: "" };
 }
-exports.Post = {
+exports.CreatePostRequest = {
     encode(message, writer = new wire_1.BinaryWriter()) {
         if (message.content !== "") {
             writer.uint32(10).string(message.content);
@@ -749,7 +804,7 @@ exports.Post = {
     decode(input, length) {
         const reader = input instanceof wire_1.BinaryReader ? input : new wire_1.BinaryReader(input);
         const end = length === undefined ? reader.len : reader.pos + length;
-        const message = createBasePost();
+        const message = createBaseCreatePostRequest();
         while (reader.pos < end) {
             const tag = reader.uint32();
             switch (tag >>> 3) {
@@ -825,66 +880,15 @@ exports.Post = {
         return obj;
     },
     create(base) {
-        return exports.Post.fromPartial(base ?? {});
+        return exports.CreatePostRequest.fromPartial(base ?? {});
     },
     fromPartial(object) {
-        const message = createBasePost();
+        const message = createBaseCreatePostRequest();
         message.content = object.content ?? "";
         message.media = object.media?.map((e) => exports.Media.fromPartial(e)) || [];
         message.poll = (object.poll !== undefined && object.poll !== null) ? exports.Poll.fromPartial(object.poll) : undefined;
         message.visibility = object.visibility ?? "";
         message.commentControl = object.commentControl ?? "";
-        return message;
-    },
-};
-function createBaseCreatePostRequest() {
-    return { post: undefined };
-}
-exports.CreatePostRequest = {
-    encode(message, writer = new wire_1.BinaryWriter()) {
-        if (message.post !== undefined) {
-            exports.Post.encode(message.post, writer.uint32(10).fork()).join();
-        }
-        return writer;
-    },
-    decode(input, length) {
-        const reader = input instanceof wire_1.BinaryReader ? input : new wire_1.BinaryReader(input);
-        const end = length === undefined ? reader.len : reader.pos + length;
-        const message = createBaseCreatePostRequest();
-        while (reader.pos < end) {
-            const tag = reader.uint32();
-            switch (tag >>> 3) {
-                case 1: {
-                    if (tag !== 10) {
-                        break;
-                    }
-                    message.post = exports.Post.decode(reader, reader.uint32());
-                    continue;
-                }
-            }
-            if ((tag & 7) === 4 || tag === 0) {
-                break;
-            }
-            reader.skip(tag & 7);
-        }
-        return message;
-    },
-    fromJSON(object) {
-        return { post: isSet(object.post) ? exports.Post.fromJSON(object.post) : undefined };
-    },
-    toJSON(message) {
-        const obj = {};
-        if (message.post !== undefined) {
-            obj.post = exports.Post.toJSON(message.post);
-        }
-        return obj;
-    },
-    create(base) {
-        return exports.CreatePostRequest.fromPartial(base ?? {});
-    },
-    fromPartial(object) {
-        const message = createBaseCreatePostRequest();
-        message.post = (object.post !== undefined && object.post !== null) ? exports.Post.fromPartial(object.post) : undefined;
         return message;
     },
 };
