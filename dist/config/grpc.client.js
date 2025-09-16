@@ -32,42 +32,8 @@ var __importStar = (this && this.__importStar) || (function () {
         return result;
     };
 })();
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.PostController = void 0;
+exports.userClient = void 0;
 const grpc = __importStar(require("@grpc/grpc-js"));
-const error_util_1 = require("../../utils/error.util");
-const logger_util_1 = __importDefault(require("../../utils/logger.util"));
-class PostController {
-    constructor(postService) {
-        this.postService = postService;
-    }
-    async feedPosting(req) {
-        try {
-            const post = await this.postService.createPost(req);
-            return {
-                message: "Post created",
-                postId: post.postId,
-            };
-        }
-        catch (err) {
-            logger_util_1.default.error("CreatePost error", { error: err.message });
-            throw new error_util_1.CustomError(grpc.status.INTERNAL, err.message);
-        }
-    }
-    async getPostsController(req) {
-        try {
-            const { pageParam } = req;
-            console.log('request comming inside the controller');
-            const result = await this.postService.getPosts(pageParam);
-            return result;
-        }
-        catch (err) {
-            logger_util_1.default.error("CreatePost error", { error: err.message });
-            throw new error_util_1.CustomError(grpc.status.INTERNAL, err.message);
-        }
-    }
-}
-exports.PostController = PostController;
+const user_1 = require("../grpc/generated/user");
+exports.userClient = new user_1.UserServiceClient(process.env.AUTH_GRPC_URL || "auth-service:50051", grpc.credentials.createInsecure(), { "grpc.keepalive_time_ms": 10000, "grpc.keepalive_timeout_ms": 5000 });

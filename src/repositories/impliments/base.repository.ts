@@ -66,7 +66,7 @@ export abstract class BaseRepository<
 
   async delete(id: string): Promise<void> {
     try {
-      await this.model.delete({ where: { id } as WhereUniqueInput });
+      return await this.model.delete({ where: { id } as WhereUniqueInput });
     } catch (error) {
       logger.error(`Error deleting entity: ${id}`, {
         error: (error as Error).message,

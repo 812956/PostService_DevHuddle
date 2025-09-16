@@ -2,10 +2,14 @@ syntax = "proto3";
 
 package social.post.v1;
 
-import "google/protobuf/wrappers.proto";
-import "google/protobuf/timestamp.proto";
-import "google/protobuf/empty.proto";
 
+// enum definitions
+
+enum MediaType {
+  MEDIA_TYPE_UNSPECIFIED = 0;
+  IMAGE = 1;
+  VIDEO = 2;
+}
 
 // Message definitions
 
@@ -64,6 +68,44 @@ message Media {
   Transform transform = 6;
 }
 
+message Attachments {
+  string id = 1;
+  optional string postId = 2;
+  MediaType type = 3;
+  string url = 4;
+  string createdAt = 5; 
+}
+
+message FeedUserProfileDetiles {
+  string username = 1;
+  string name = 2;
+  string avatar = 3;
+}
+
+message ListPosts {
+  string id = 1;
+  string userId = 2;
+  string type = 3;
+  string content = 4;
+  repeated string tags = 5;
+  repeated Media imageMedia = 6;
+  repeated Media videoMedia = 7;
+  string visibility = 8;
+  string commentControl = 9;
+  string createdAt = 10; // store as ISO string or timestamp
+  string updatedAt = 11; // store as ISO string or timestamp
+  FeedUserProfileDetiles user = 12;
+}
+
+message Post {
+  string id = 1;
+  string content = 2;
+  string userId = 3;
+  string createdAt = 4;
+  FeedUserProfileDetiles user = 5;
+}
+
+
 // Request & Response
 
 message CreatePostRequest {
@@ -72,14 +114,63 @@ message CreatePostRequest {
   optional Poll poll = 3;
   string visibility = 4;
   string commentControl = 5;
+  string type = 6;
+  string userId = 7;
 }
 
 message CreatePostResponse {
+  string postId  = 1;
   string message = 2;
 }
+
+message ListPostsRequest {
+  optional string pageParam = 1;
+}
+
+message ListPostsResponse{
+  repeated Post pages  = 1;
+  optional string nextCursor = 2;
+}
+
+message UploadMediaRequest {
+  string url = 1;
+  string type = 2;
+}
+
+message UploadMediaResponse {
+  string mediaId = 1;
+}
+
+message SubmitPostRequest {
+  string content = 1;
+  string userId = 2;
+}
+
+message SubmitPostResponse {
+  string id = 1;
+  string content = 2;
+  string userId = 3;
+}
+
+message DeletePostRequest {
+  string postId = 1;
+}
+
+message DeletePostResponse {
+  string id = 1;
+  string content = 2;
+  string userId = 3;
+  string createdAt = 4;
+}
+
+
 
 // Service definition
 
 service PostService {
   rpc CreatePost (CreatePostRequest) returns (CreatePostResponse);
+  rpc ListPosts (ListPostsRequest) returns (ListPostsResponse);
+  rpc UploadMedia (UploadMediaRequest) returns (UploadMediaResponse);
+  rpc SubmitPost (SubmitPostRequest) returns (SubmitPostResponse);
+  rpc DeletePost (DeletePostRequest) returns (DeletePostResponse);
 }

@@ -50,8 +50,21 @@ const postController = new feed_controller_1.PostController(postService);
 const postServiceActions = {
     createPost: async (call, callback) => {
         try {
-            console.log('request is comming without any problem .......', call.request);
+            console.log("request is comming without any problem .......", call.request);
             const response = await postController.feedPosting(call.request);
+            callback(null, response);
+        }
+        catch (err) {
+            callback({
+                code: err instanceof error_util_1.CustomError ? err.status : grpc.status.INTERNAL,
+                message: err.message || "Internal server error",
+            }, null);
+        }
+    },
+    listPosts: async (call, callback) => {
+        try {
+            const response = await postController.getPostsController(call.request);
+            console.log('this is the response ^^^^^^^^^^^^^^^^^^^', response);
             callback(null, response);
         }
         catch (err) {

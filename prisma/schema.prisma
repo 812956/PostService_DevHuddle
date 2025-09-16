@@ -13,7 +13,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-
 enum PostType {
   TEXT
   ARTICLE
@@ -22,8 +21,7 @@ enum PostType {
 
 enum Visibility {
   PUBLIC
-  CONNECTIONS
-  GROUP // handled as "GROUP:<groupId>" in application logic
+  VISIBILITY_CONNECTIONS
 }
 
 enum CommentControl {
@@ -46,17 +44,19 @@ enum TargetType {
   GROUP
 }
 
+enum MediaType {
+  IMAGE
+  VIDEO
+}
+
 model Post {
   id             String         @id @default(uuid())
   userId         String
-  type           PostType?      
+  type           PostType
   content        String?
   tags           String[]       @default([])
-  mentions       String[]       @default([])
-  // imageLocation   String?
-  // location        Json?
-  imageUrls      String[]
-  videoUrl       String
+  imageMedia     Json[]         @default([])
+  videoMedia     Json[]         @default([])
   visibility     Visibility
   commentControl CommentControl
   createdAt      DateTime       @default(now())
@@ -64,16 +64,38 @@ model Post {
   impressions    Int            @default(0)
 
   // Relations
-  UserFeed  UserFeed[]
-  Comments  Comment[]
-  Shares    Share[]
-  Reactions Reaction[]
-  Poll      Poll?
+  UserFeed   UserFeed[]
+  Comments   Comment[]
+  Shares     Share[]
+  Reactions  Reaction[]
+  Poll       Poll?
+  SavedPosts SavedPost[]
+  Reports    Report[]
+  // Media      Media[]
+  // @@index([mentions])
 
   @@index([userId])
   @@index([createdAt])
   @@index([tags])
-  @@index([mentions])
+}
+
+model Posts {
+  id                  String         @id @default(cuid())
+  content             String
+  userId              String
+  
+  attachments         Media[]  
+  createdAt DateTime @default(now())
+  @@map("posts")
+}
+
+model Media {
+  id        String    @id @default(cuid())
+  postId    String?
+  Post      Posts?     @relation(fields: [postId], references: [id], onDelete: SetNull)
+  type      MediaType
+  url       String
+  createdAt DateTime  @default(now())
 }
 
 model UserFeed {
@@ -151,4 +173,26 @@ model Poll {
   Post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
 }
 
+model SavedPost {
+  userId    String
+  postId    String
+  createdAt DateTime @default(now())
+  Post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
 
+  @@id([userId, postId])
+  @@index([userId])
+  @@index([postId])
+  @@index([createdAt])
+}
+
+model Report {
+  id        String   @id @default(uuid())
+  postId    String
+  userId    String
+  reason    String // "spam", "inappropriate"
+  createdAt DateTime @default(now())
+  Post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@index([postId])
+  @@index([userId])
+}

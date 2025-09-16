@@ -1,30 +1,36 @@
+
+
 import path from "path";
 import { execSync } from "child_process";
 import fs from "fs";
 
-// Paths
-const PROTO_DIR = path.resolve(__dirname,"../","./protos");
-const OUT_DIR = path.resolve(__dirname, "grpc", "generated");
-const PROTO_FILE = path.resolve(PROTO_DIR, "post.proto");
+const protoPath = [];
+protoPath.push(
+  path.resolve(__dirname, "../", "protos", "user.proto"),
+  path.resolve(__dirname,"../", "protos", "post.proto")
+)
+const outDir = path.resolve(__dirname, "grpc", "generated");
 
-// Ensure output directory exists
-if (!fs.existsSync(OUT_DIR)) {
-  fs.mkdirSync(OUT_DIR, { recursive: true });
+if (!fs.existsSync(outDir)) {
+  fs.mkdirSync(outDir, { recursive: true });
 }
 
-try {
+for(let eachPathProtoFile of protoPath) {
+  try {
   const command = [
     "protoc",
     `--plugin=protoc-gen-ts_proto=${path.resolve("node_modules", ".bin", "protoc-gen-ts_proto")}`,
-    `--ts_proto_out=${OUT_DIR}`,
+    `--ts_proto_out=${outDir}`,
     `--ts_proto_opt=outputServices=grpc-js,esModuleInterop=true`,
-    `--proto_path=${PROTO_DIR}`,
-    PROTO_FILE,
+    `--proto_path=${path.dirname(eachPathProtoFile)}`,
+    eachPathProtoFile
   ].join(" ");
 
   execSync(command, { stdio: "inherit" });
-  console.log("✅ gRPC code generated using ts-proto");
-} catch (err) {
-  console.error("❌ Failed to generate gRPC code:", err);
+  console.log("✅ gRPC code generated using ts-proto (Post Service)");
+} catch (error) {
+  console.error("❌ Failed to generate gRPC code:", error);
   process.exit(1);
+}
+
 }

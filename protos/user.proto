@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+message getUserForFeedListingRequest {
+   string userId = 1;
+}
+
+message getUserForFeedListingResponse {
+    string avatar = 1;
+    string name = 2;
+    string username = 3;
+}
+
+service UserService {
+  // User-related methods
+  rpc getUserForFeedListing (getUserForFeedListingRequest) returns (getUserForFeedListingResponse);
+}

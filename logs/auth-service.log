@@ -1,0 +1,10 @@
+{"level":"info","message":"Prisma connection established","timestamp":"2025-09-08T05:21:18.636Z"}
+{"level":"info","message":"✅ gRPC server running on port 50051","timestamp":"2025-09-08T05:21:19.033Z"}
+{"error":"connect ECONNREFUSED ::1:6379","level":"error","message":"Redis Client Error","timestamp":"2025-09-08T05:21:19.035Z"}
+{"error":"connect ECONNREFUSED ::1:6379","level":"error","message":"Redis Client Error","timestamp":"2025-09-08T05:21:19.094Z"}
+{"error":"connect ECONNREFUSED ::1:6379","level":"error","message":"Redis Client Error","timestamp":"2025-09-08T05:21:19.347Z"}
+{"error":"connect ECONNREFUSED ::1:6379","level":"error","message":"Redis Client Error","timestamp":"2025-09-08T05:21:19.620Z"}
+{"error":"connect ECONNREFUSED ::1:6379","level":"error","message":"Redis Client Error","timestamp":"2025-09-08T05:21:20.090Z"}
+{"error":"connect ECONNREFUSED ::1:6379","level":"error","message":"Redis Client Error","timestamp":"2025-09-08T05:21:21.068Z"}
+{"error":"connect ECONNREFUSED ::1:6379","level":"error","message":"Redis Client Error","timestamp":"2025-09-08T05:21:22.719Z"}
+{"error":"connect ECONNREFUSED ::1:6379","level":"error","message":"Redis Client Error","timestamp":"2025-09-08T05:21:24.863Z"}
