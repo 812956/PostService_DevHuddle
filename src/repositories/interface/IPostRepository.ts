@@ -3,6 +3,7 @@ import { SubmitPostRequest, SubmitPostResponse } from "../../grpc/generated/post
 
 
 export interface PostSelectOptions {
+  include:any;
   take: number;
   orderBy: {
     id: "asc" | "desc";

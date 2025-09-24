@@ -114,10 +114,15 @@ export interface Media {
 }
 
 export interface Attachments {
+  /** Unique identifier for the media */
   id: string;
-  postId?: string | undefined;
-  type: MediaType;
+  /** Nullable field, mapped as optional string */
+  postId: string;
+  /** Type of media (IMAGE or VIDEO) */
+  type: string;
+  /** URL of the media */
   url: string;
+  /** Date of creation */
   createdAt: string;
 }
 
@@ -150,6 +155,7 @@ export interface Post {
   userId: string;
   createdAt: string;
   user: FeedUserProfileDetiles | undefined;
+  attachments: Attachments[];
 }
 
 export interface CreatePostRequest {
@@ -188,6 +194,7 @@ export interface UploadMediaResponse {
 export interface SubmitPostRequest {
   content: string;
   userId: string;
+  mediaIds: string[];
 }
 
 export interface SubmitPostResponse {
@@ -205,6 +212,15 @@ export interface DeletePostResponse {
   content: string;
   userId: string;
   createdAt: string;
+}
+
+export interface DeleteUnusedMediasRequest {
+}
+
+export interface DeleteUnusedMediasResponse {
+  message: string;
+  deletedCount: number;
+  success: boolean;
 }
 
 function createBaseUser(): User {
@@ -1034,7 +1050,7 @@ export const Media: MessageFns<Media> = {
 };
 
 function createBaseAttachments(): Attachments {
-  return { id: "", postId: undefined, type: 0, url: "", createdAt: "" };
+  return { id: "", postId: "", type: "", url: "", createdAt: "" };
 }
 
 export const Attachments: MessageFns<Attachments> = {
@@ -1042,11 +1058,11 @@ export const Attachments: MessageFns<Attachments> = {
     if (message.id !== "") {
       writer.uint32(10).string(message.id);
     }
-    if (message.postId !== undefined) {
+    if (message.postId !== "") {
       writer.uint32(18).string(message.postId);
     }
-    if (message.type !== 0) {
-      writer.uint32(24).int32(message.type);
+    if (message.type !== "") {
+      writer.uint32(26).string(message.type);
     }
     if (message.url !== "") {
       writer.uint32(34).string(message.url);
@@ -1081,11 +1097,11 @@ export const Attachments: MessageFns<Attachments> = {
           continue;
         }
         case 3: {
-          if (tag !== 24) {
+          if (tag !== 26) {
             break;
           }
 
-          message.type = reader.int32() as any;
+          message.type = reader.string();
           continue;
         }
         case 4: {
@@ -1116,8 +1132,8 @@ export const Attachments: MessageFns<Attachments> = {
   fromJSON(object: any): Attachments {
     return {
       id: isSet(object.id) ? globalThis.String(object.id) : "",
-      postId: isSet(object.postId) ? globalThis.String(object.postId) : undefined,
-      type: isSet(object.type) ? mediaTypeFromJSON(object.type) : 0,
+      postId: isSet(object.postId) ? globalThis.String(object.postId) : "",
+      type: isSet(object.type) ? globalThis.String(object.type) : "",
       url: isSet(object.url) ? globalThis.String(object.url) : "",
       createdAt: isSet(object.createdAt) ? globalThis.String(object.createdAt) : "",
     };
@@ -1128,11 +1144,11 @@ export const Attachments: MessageFns<Attachments> = {
     if (message.id !== "") {
       obj.id = message.id;
     }
-    if (message.postId !== undefined) {
+    if (message.postId !== "") {
       obj.postId = message.postId;
     }
-    if (message.type !== 0) {
-      obj.type = mediaTypeToJSON(message.type);
+    if (message.type !== "") {
+      obj.type = message.type;
     }
     if (message.url !== "") {
       obj.url = message.url;
@@ -1149,8 +1165,8 @@ export const Attachments: MessageFns<Attachments> = {
   fromPartial<I extends Exact<DeepPartial<Attachments>, I>>(object: I): Attachments {
     const message = createBaseAttachments();
     message.id = object.id ?? "";
-    message.postId = object.postId ?? undefined;
-    message.type = object.type ?? 0;
+    message.postId = object.postId ?? "";
+    message.type = object.type ?? "";
     message.url = object.url ?? "";
     message.createdAt = object.createdAt ?? "";
     return message;
@@ -1505,7 +1521,7 @@ export const ListPosts: MessageFns<ListPosts> = {
 };
 
 function createBasePost(): Post {
-  return { id: "", content: "", userId: "", createdAt: "", user: undefined };
+  return { id: "", content: "", userId: "", createdAt: "", user: undefined, attachments: [] };
 }
 
 export const Post: MessageFns<Post> = {
@@ -1524,6 +1540,9 @@ export const Post: MessageFns<Post> = {
     }
     if (message.user !== undefined) {
       FeedUserProfileDetiles.encode(message.user, writer.uint32(42).fork()).join();
+    }
+    for (const v of message.attachments) {
+      Attachments.encode(v!, writer.uint32(50).fork()).join();
     }
     return writer;
   },
@@ -1575,6 +1594,14 @@ export const Post: MessageFns<Post> = {
           message.user = FeedUserProfileDetiles.decode(reader, reader.uint32());
           continue;
         }
+        case 6: {
+          if (tag !== 50) {
+            break;
+          }
+
+          message.attachments.push(Attachments.decode(reader, reader.uint32()));
+          continue;
+        }
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -1591,6 +1618,9 @@ export const Post: MessageFns<Post> = {
       userId: isSet(object.userId) ? globalThis.String(object.userId) : "",
       createdAt: isSet(object.createdAt) ? globalThis.String(object.createdAt) : "",
       user: isSet(object.user) ? FeedUserProfileDetiles.fromJSON(object.user) : undefined,
+      attachments: globalThis.Array.isArray(object?.attachments)
+        ? object.attachments.map((e: any) => Attachments.fromJSON(e))
+        : [],
     };
   },
 
@@ -1611,6 +1641,9 @@ export const Post: MessageFns<Post> = {
     if (message.user !== undefined) {
       obj.user = FeedUserProfileDetiles.toJSON(message.user);
     }
+    if (message.attachments?.length) {
+      obj.attachments = message.attachments.map((e) => Attachments.toJSON(e));
+    }
     return obj;
   },
 
@@ -1626,6 +1659,7 @@ export const Post: MessageFns<Post> = {
     message.user = (object.user !== undefined && object.user !== null)
       ? FeedUserProfileDetiles.fromPartial(object.user)
       : undefined;
+    message.attachments = object.attachments?.map((e) => Attachments.fromPartial(e)) || [];
     return message;
   },
 };
@@ -2131,7 +2165,7 @@ export const UploadMediaResponse: MessageFns<UploadMediaResponse> = {
 };
 
 function createBaseSubmitPostRequest(): SubmitPostRequest {
-  return { content: "", userId: "" };
+  return { content: "", userId: "", mediaIds: [] };
 }
 
 export const SubmitPostRequest: MessageFns<SubmitPostRequest> = {
@@ -2141,6 +2175,9 @@ export const SubmitPostRequest: MessageFns<SubmitPostRequest> = {
     }
     if (message.userId !== "") {
       writer.uint32(18).string(message.userId);
+    }
+    for (const v of message.mediaIds) {
+      writer.uint32(26).string(v!);
     }
     return writer;
   },
@@ -2168,6 +2205,14 @@ export const SubmitPostRequest: MessageFns<SubmitPostRequest> = {
           message.userId = reader.string();
           continue;
         }
+        case 3: {
+          if (tag !== 26) {
+            break;
+          }
+
+          message.mediaIds.push(reader.string());
+          continue;
+        }
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -2181,6 +2226,7 @@ export const SubmitPostRequest: MessageFns<SubmitPostRequest> = {
     return {
       content: isSet(object.content) ? globalThis.String(object.content) : "",
       userId: isSet(object.userId) ? globalThis.String(object.userId) : "",
+      mediaIds: globalThis.Array.isArray(object?.mediaIds) ? object.mediaIds.map((e: any) => globalThis.String(e)) : [],
     };
   },
 
@@ -2192,6 +2238,9 @@ export const SubmitPostRequest: MessageFns<SubmitPostRequest> = {
     if (message.userId !== "") {
       obj.userId = message.userId;
     }
+    if (message.mediaIds?.length) {
+      obj.mediaIds = message.mediaIds;
+    }
     return obj;
   },
 
@@ -2202,6 +2251,7 @@ export const SubmitPostRequest: MessageFns<SubmitPostRequest> = {
     const message = createBaseSubmitPostRequest();
     message.content = object.content ?? "";
     message.userId = object.userId ?? "";
+    message.mediaIds = object.mediaIds?.map((e) => e) || [];
     return message;
   },
 };
@@ -2464,6 +2514,141 @@ export const DeletePostResponse: MessageFns<DeletePostResponse> = {
   },
 };
 
+function createBaseDeleteUnusedMediasRequest(): DeleteUnusedMediasRequest {
+  return {};
+}
+
+export const DeleteUnusedMediasRequest: MessageFns<DeleteUnusedMediasRequest> = {
+  encode(_: DeleteUnusedMediasRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): DeleteUnusedMediasRequest {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseDeleteUnusedMediasRequest();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(_: any): DeleteUnusedMediasRequest {
+    return {};
+  },
+
+  toJSON(_: DeleteUnusedMediasRequest): unknown {
+    const obj: any = {};
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<DeleteUnusedMediasRequest>, I>>(base?: I): DeleteUnusedMediasRequest {
+    return DeleteUnusedMediasRequest.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<DeleteUnusedMediasRequest>, I>>(_: I): DeleteUnusedMediasRequest {
+    const message = createBaseDeleteUnusedMediasRequest();
+    return message;
+  },
+};
+
+function createBaseDeleteUnusedMediasResponse(): DeleteUnusedMediasResponse {
+  return { message: "", deletedCount: 0, success: false };
+}
+
+export const DeleteUnusedMediasResponse: MessageFns<DeleteUnusedMediasResponse> = {
+  encode(message: DeleteUnusedMediasResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.message !== "") {
+      writer.uint32(10).string(message.message);
+    }
+    if (message.deletedCount !== 0) {
+      writer.uint32(16).int32(message.deletedCount);
+    }
+    if (message.success !== false) {
+      writer.uint32(24).bool(message.success);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): DeleteUnusedMediasResponse {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseDeleteUnusedMediasResponse();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.message = reader.string();
+          continue;
+        }
+        case 2: {
+          if (tag !== 16) {
+            break;
+          }
+
+          message.deletedCount = reader.int32();
+          continue;
+        }
+        case 3: {
+          if (tag !== 24) {
+            break;
+          }
+
+          message.success = reader.bool();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): DeleteUnusedMediasResponse {
+    return {
+      message: isSet(object.message) ? globalThis.String(object.message) : "",
+      deletedCount: isSet(object.deletedCount) ? globalThis.Number(object.deletedCount) : 0,
+      success: isSet(object.success) ? globalThis.Boolean(object.success) : false,
+    };
+  },
+
+  toJSON(message: DeleteUnusedMediasResponse): unknown {
+    const obj: any = {};
+    if (message.message !== "") {
+      obj.message = message.message;
+    }
+    if (message.deletedCount !== 0) {
+      obj.deletedCount = Math.round(message.deletedCount);
+    }
+    if (message.success !== false) {
+      obj.success = message.success;
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<DeleteUnusedMediasResponse>, I>>(base?: I): DeleteUnusedMediasResponse {
+    return DeleteUnusedMediasResponse.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<DeleteUnusedMediasResponse>, I>>(object: I): DeleteUnusedMediasResponse {
+    const message = createBaseDeleteUnusedMediasResponse();
+    message.message = object.message ?? "";
+    message.deletedCount = object.deletedCount ?? 0;
+    message.success = object.success ?? false;
+    return message;
+  },
+};
+
 export type PostServiceService = typeof PostServiceService;
 export const PostServiceService = {
   createPost: {
@@ -2511,6 +2696,17 @@ export const PostServiceService = {
     responseSerialize: (value: DeletePostResponse): Buffer => Buffer.from(DeletePostResponse.encode(value).finish()),
     responseDeserialize: (value: Buffer): DeletePostResponse => DeletePostResponse.decode(value),
   },
+  deleteUnusedMedias: {
+    path: "/social.post.v1.PostService/DeleteUnusedMedias",
+    requestStream: false,
+    responseStream: false,
+    requestSerialize: (value: DeleteUnusedMediasRequest): Buffer =>
+      Buffer.from(DeleteUnusedMediasRequest.encode(value).finish()),
+    requestDeserialize: (value: Buffer): DeleteUnusedMediasRequest => DeleteUnusedMediasRequest.decode(value),
+    responseSerialize: (value: DeleteUnusedMediasResponse): Buffer =>
+      Buffer.from(DeleteUnusedMediasResponse.encode(value).finish()),
+    responseDeserialize: (value: Buffer): DeleteUnusedMediasResponse => DeleteUnusedMediasResponse.decode(value),
+  },
 } as const;
 
 export interface PostServiceServer extends UntypedServiceImplementation {
@@ -2519,6 +2715,7 @@ export interface PostServiceServer extends UntypedServiceImplementation {
   uploadMedia: handleUnaryCall<UploadMediaRequest, UploadMediaResponse>;
   submitPost: handleUnaryCall<SubmitPostRequest, SubmitPostResponse>;
   deletePost: handleUnaryCall<DeletePostRequest, DeletePostResponse>;
+  deleteUnusedMedias: handleUnaryCall<DeleteUnusedMediasRequest, DeleteUnusedMediasResponse>;
 }
 
 export interface PostServiceClient extends Client {
@@ -2596,6 +2793,21 @@ export interface PostServiceClient extends Client {
     metadata: Metadata,
     options: Partial<CallOptions>,
     callback: (error: ServiceError | null, response: DeletePostResponse) => void,
+  ): ClientUnaryCall;
+  deleteUnusedMedias(
+    request: DeleteUnusedMediasRequest,
+    callback: (error: ServiceError | null, response: DeleteUnusedMediasResponse) => void,
+  ): ClientUnaryCall;
+  deleteUnusedMedias(
+    request: DeleteUnusedMediasRequest,
+    metadata: Metadata,
+    callback: (error: ServiceError | null, response: DeleteUnusedMediasResponse) => void,
+  ): ClientUnaryCall;
+  deleteUnusedMedias(
+    request: DeleteUnusedMediasRequest,
+    metadata: Metadata,
+    options: Partial<CallOptions>,
+    callback: (error: ServiceError | null, response: DeleteUnusedMediasResponse) => void,
   ): ClientUnaryCall;
 }
 

@@ -54,11 +54,6 @@ export class PostController implements IfeedController {
         pageParam as string | undefined
       );
 
-      console.log(
-        "this is the all posts ==============================",
-        result
-      );
-
       return result;
     } catch (err: any) {
       logger.error("List posts error", { error: err.message });

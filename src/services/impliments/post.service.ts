@@ -21,7 +21,7 @@ import * as grpc from "@grpc/grpc-js";
 import { IMediaRepository } from "../../repositories/interface/IMediaRepository";
 
 export class PostSerive implements IpostService {
-  constructor(private postRepository: IPostRepository ) {}
+  constructor(private postRepository: IPostRepository) {}
 
   async createPost(payload: CreatePostRequest) {
     try {
@@ -50,6 +50,9 @@ export class PostSerive implements IpostService {
     try {
       const PAGE_SIZE = 10;
       const PostselectOptions: PostSelectOptions = {
+        include: {
+          attachments: true,
+        },
         take: PAGE_SIZE + 1,
         skip: pageParam ? 1 : 0,
         cursor: pageParam ? { id: pageParam } : undefined,
@@ -60,16 +63,13 @@ export class PostSerive implements IpostService {
         PostselectOptions
       );
 
+      console.log("this are the post datas ====================", prismaPosts);
+
       // const fromPostToListPostRes = PostMapper.fromPosts(prismaPosts);
 
       const hasMore = prismaPosts.length > PAGE_SIZE;
       const items = prismaPosts.slice(0, PAGE_SIZE);
       const nextCursor = hasMore ? items[items.length - 1].id : null;
-
-      console.log(
-        "this is the next cursor ================================================================",
-        nextCursor
-      );
 
       return {
         pages: items,
@@ -96,6 +96,4 @@ export class PostSerive implements IpostService {
       throw new CustomError(grpc.status.INTERNAL, err.message);
     }
   }
-
-  
 }

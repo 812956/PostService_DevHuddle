@@ -46,7 +46,15 @@ export class PostRepository
 
   async submitPostRepo(data: SubmitPostRequest): Promise<SubmitPostResponse> {
     try {
-      const post = await prisma.posts.create({ data });
+      const post = await prisma.posts.create({
+        data: {
+          content: data.content,
+          userId: data.userId,
+          attachments: {
+            connect: data.mediaIds.map((id) => ({ id })),
+          },
+        },
+      });
 
       return post;
     } catch (error: any) {
@@ -81,8 +89,6 @@ export class PostRepository
         },
       });
 
-      console.log('this is the deleted posts ------------------------------', post)
-      
       return post;
     } catch (error: any) {
       logger.error("Error delete entity", {
@@ -91,8 +97,6 @@ export class PostRepository
       throw new Error("Database error");
     }
   }
-
-  
 
   async getPostsRepo(postSelectOptions: PostSelectOptions): Promise<any> {
     try {

@@ -17,8 +17,6 @@
     "@types/express": "^5.0.3",
     "@types/node": "^24.0.15",
     "prisma": "^6.14.0",
-    "ts-node": "^10.9.2",
-    "ts-node-dev": "^2.0.0",
     "ts-proto": "^2.7.5",
     "tsc-watch": "^7.1.1",
     "typescript": "^5.8.3"
@@ -26,16 +24,16 @@
   "dependencies": {
     "@grpc/grpc-js": "^1.13.4",
     "@prisma/client": "^6.14.0",
-    "@prisma/extension-accelerate": "^2.0.2",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.2",
     "compression": "^1.8.1",
     "cookie-parser": "^1.4.7",
     "dotenv": "^17.2.0",
     "express": "^5.1.0",
-    "helmet": "^8.1.0",
+    "helmet": "^8.1.0", 
     "path": "^0.12.7",
     "redis": "^5.6.0",
+    "uploadthing": "^7.7.4",
     "winston": "^3.17.0",
     "zod": "^4.1.5"
   }

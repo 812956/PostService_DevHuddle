@@ -5,6 +5,8 @@ import {
   CreatePostResponse,
   DeletePostRequest,
   DeletePostResponse,
+  DeleteUnusedMediasRequest,
+  DeleteUnusedMediasResponse,
   ListPostsRequest,
   ListPostsResponse,
   PostServiceServer,
@@ -37,10 +39,6 @@ const postServiceActions: PostServiceServer = {
     callback: grpc.sendUnaryData<CreatePostResponse>
   ) => {
     try {
-      console.log(
-        "request is comming without any problem .......",
-        call.request
-      );
       const response = await postController.feedPosting(call.request);
       callback(null, response);
     } catch (err: any) {
@@ -76,7 +74,13 @@ const postServiceActions: PostServiceServer = {
     callback: grpc.sendUnaryData<UploadMediaResponse>
   ) => {
     try {
-      const response = await mediaController.uploadMediaService(call.request);
+      console.log(
+        "this is the uplaod inpost service ....................",
+        call.request
+      );
+      const response = await mediaController.uploadMediaController(
+        call.request
+      );
 
       callback(null, response);
     } catch (err: any) {
@@ -112,9 +116,28 @@ const postServiceActions: PostServiceServer = {
     callback: grpc.sendUnaryData<DeletePostResponse>
   ) => {
     try {
-      console.log("this is the reques");
       const response = await postController.deletePostController(call.request);
 
+      callback(null, response);
+    } catch (err: any) {
+      callback(
+        {
+          code: err instanceof CustomError ? err.status : grpc.status.INTERNAL,
+          message: err.message || "Internal server error",
+        },
+        null
+      );
+    }
+  },
+  deleteUnusedMedias: async (
+    call: grpc.ServerUnaryCall<
+      DeleteUnusedMediasRequest,
+      DeleteUnusedMediasResponse
+    >,
+    callback: grpc.sendUnaryData<DeleteUnusedMediasResponse>
+  ) => {
+    try {
+      const response = await mediaController.deleteUnusedMedia();
       callback(null, response);
     } catch (err: any) {
       callback(

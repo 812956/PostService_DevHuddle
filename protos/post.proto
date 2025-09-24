@@ -69,12 +69,13 @@ message Media {
 }
 
 message Attachments {
-  string id = 1;
-  optional string postId = 2;
-  MediaType type = 3;
-  string url = 4;
-  string createdAt = 5; 
+  string id = 1;              // Unique identifier for the media
+  string post_id = 2;         // Nullable field, mapped as optional string
+  string type = 3;         // Type of media (IMAGE or VIDEO)
+  string url = 4;             // URL of the media
+  string created_at = 5;  // Date of creation
 }
+
 
 message FeedUserProfileDetiles {
   string username = 1;
@@ -103,6 +104,7 @@ message Post {
   string userId = 3;
   string createdAt = 4;
   FeedUserProfileDetiles user = 5;
+  repeated Attachments attachments = 6;
 }
 
 
@@ -144,6 +146,7 @@ message UploadMediaResponse {
 message SubmitPostRequest {
   string content = 1;
   string userId = 2;
+  repeated string mediaIds = 3;
 }
 
 message SubmitPostResponse {
@@ -163,6 +166,14 @@ message DeletePostResponse {
   string createdAt = 4;
 }
 
+message DeleteUnusedMediasRequest {}
+
+message DeleteUnusedMediasResponse {
+  string message = 1;
+  int32 deleted_count = 2;
+  bool success = 3;
+}
+
 
 
 // Service definition
@@ -173,4 +184,5 @@ service PostService {
   rpc UploadMedia (UploadMediaRequest) returns (UploadMediaResponse);
   rpc SubmitPost (SubmitPostRequest) returns (SubmitPostResponse);
   rpc DeletePost (DeletePostRequest) returns (DeletePostResponse);
+  rpc DeleteUnusedMedias (DeleteUnusedMediasRequest) returns (DeleteUnusedMediasResponse);
 }
