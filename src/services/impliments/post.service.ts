@@ -63,7 +63,7 @@ export class PostSerive implements IpostService {
         PostselectOptions
       );
 
-      console.log("this are the post datas ====================", prismaPosts);
+      // console.log("this are the post datas ====================", prismaPosts);
 
       // const fromPostToListPostRes = PostMapper.fromPosts(prismaPosts);
 
