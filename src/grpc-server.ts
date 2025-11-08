@@ -23,7 +23,7 @@ import { PostRepository } from "./repositories/impliments/post.repository";
 import { MediaRepository } from "./repositories/impliments/media.repository";
 import { MediaService } from "./services/impliments/media.service";
 import { MediaController } from "./controllers/impliments/media.controller";
-import { response } from "express";
+import { grpcHandler } from "./utils/grpc.helper";
 
 const postRepository = new PostRepository();
 const postService = new PostSerive(postRepository);
@@ -33,122 +33,23 @@ const mediaRepository = new MediaRepository();
 const mediaService = new MediaService(mediaRepository);
 const mediaController = new MediaController(mediaService);
 
+
+
 const postServiceActions: PostServiceServer = {
-  createPost: async (
-    call: grpc.ServerUnaryCall<CreatePostRequest, CreatePostResponse>,
-    callback: grpc.sendUnaryData<CreatePostResponse>
-  ) => {
-    try {
-      const response = await postController.feedPosting(call.request);
-      callback(null, response);
-    } catch (err: any) {
-      callback(
-        {
-          code: err instanceof CustomError ? err.status : grpc.status.INTERNAL,
-          message: err.message || "Internal server error",
-        },
-        null
-      );
-    }
-  },
-  listPosts: async (
-    call: grpc.ServerUnaryCall<ListPostsRequest, ListPostsResponse>,
-    callback: grpc.sendUnaryData<ListPostsResponse>
-  ) => {
-    try {
-      const response = await postController.getPostsController(call.request);
-
-      callback(null, response);
-    } catch (err: any) {
-      callback(
-        {
-          code: err instanceof CustomError ? err.status : grpc.status.INTERNAL,
-          message: err.message || "Internal server error",
-        },
-        null
-      );
-    }
-  },
-  uploadMedia: async (
-    call: grpc.ServerUnaryCall<UploadMediaRequest, UploadMediaResponse>,
-    callback: grpc.sendUnaryData<UploadMediaResponse>
-  ) => {
-    try {
-      console.log(
-        "this is the uplaod inpost service ....................",
-        call.request
-      );
-      const response = await mediaController.uploadMediaController(
-        call.request
-      );
-
-      callback(null, response);
-    } catch (err: any) {
-      callback(
-        {
-          code: err instanceof CustomError ? err.status : grpc.status.INTERNAL,
-          message: err.message || "Internal server error",
-        },
-        null
-      );
-    }
-  },
-  submitPost: async (
-    call: grpc.ServerUnaryCall<SubmitPostRequest, SubmitPostResponse>,
-    callback: grpc.sendUnaryData<SubmitPostResponse>
-  ) => {
-    try {
-      const response = await postController.submitPostController(call.request);
-
-      callback(null, response);
-    } catch (err: any) {
-      callback(
-        {
-          code: err instanceof CustomError ? err.status : grpc.status.INTERNAL,
-          message: err.message || "Internal server error",
-        },
-        null
-      );
-    }
-  },
-  deletePost: async (
-    call: grpc.ServerUnaryCall<DeletePostRequest, DeletePostResponse>,
-    callback: grpc.sendUnaryData<DeletePostResponse>
-  ) => {
-    try {
-      const response = await postController.deletePostController(call.request);
-
-      callback(null, response);
-    } catch (err: any) {
-      callback(
-        {
-          code: err instanceof CustomError ? err.status : grpc.status.INTERNAL,
-          message: err.message || "Internal server error",
-        },
-        null
-      );
-    }
-  },
-  deleteUnusedMedias: async (
-    call: grpc.ServerUnaryCall<
-      DeleteUnusedMediasRequest,
-      DeleteUnusedMediasResponse
-    >,
-    callback: grpc.sendUnaryData<DeleteUnusedMediasResponse>
-  ) => {
-    try {
-      const response = await mediaController.deleteUnusedMedia();
-      callback(null, response);
-    } catch (err: any) {
-      callback(
-        {
-          code: err instanceof CustomError ? err.status : grpc.status.INTERNAL,
-          message: err.message || "Internal server error",
-        },
-        null
-      );
-    }
-  },
+  createPost: grpcHandler(postController.feedPosting.bind(postController)),
+  listPosts: grpcHandler(postController.getPostsController.bind(postController)),
+  uploadMedia: grpcHandler(
+    mediaController.uploadMediaController.bind(mediaController)
+  ),
+  submitPost: grpcHandler(
+    postController.submitPostController.bind(postController)
+  ),
+  deletePost: grpcHandler(
+    postController.deletePostController.bind(postController)
+  ),
+  deleteUnusedMedias: grpcHandler(
+    mediaController.deleteUnusedMedia.bind(mediaController)
+  ),
 };
 export const grpcServer = new grpc.Server();
 grpcServer.addService(PostServiceService, postServiceActions);
