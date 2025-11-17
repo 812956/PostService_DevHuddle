@@ -179,7 +179,7 @@ message DeleteUnusedMediasResponse {
 // Service definition
 
 service PostService {
-  rpc CreatePost (CreatePostRequest) returns (CreatePostResponse);
+  // rpc CreatePost (CreatePostRequest) returns (CreatePostResponse);
   rpc ListPosts (ListPostsRequest) returns (ListPostsResponse);
   rpc UploadMedia (UploadMediaRequest) returns (UploadMediaResponse);
   rpc SubmitPost (SubmitPostRequest) returns (SubmitPostResponse);

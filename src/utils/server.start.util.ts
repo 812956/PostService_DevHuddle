@@ -1,8 +1,8 @@
 import logger from "./logger.util";
-import express,{ Express } from "express";
-import { connectRedis } from "./redis.util";
+import express, { Express } from "express";
 import { grpcServer } from "../grpc-server";
-
+import { connectRedis } from "../config/redis.config";
+import { disconnectProducer } from "./kafka.util";
 
 export const app: Express = express();
 
@@ -12,12 +12,13 @@ export const startServer = async () => {
 
     await connectRedis();
     logger.info("Redis connection established");
+    
     const PORT = process.env.PORT || 3002;
     app.listen(PORT, () => {
-      logger.info(`Auth Service running on port ${PORT}`);
+      logger.info(`Post Service running on port ${PORT}`);
     });
-    grpcServer;
     
+    grpcServer;
   } catch (err: any) {
     logger.error("Failed to start server", {
       error: err.message,

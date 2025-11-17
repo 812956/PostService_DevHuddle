@@ -1,7 +1,6 @@
 import { IfeedController } from "../interfaces/IfeedController";
 import { partial } from "zod/v4/core/util.cjs";
 import { IpostService } from "../../services/interfaces/IpostService";
-import * as grpc from "@grpc/grpc-js";
 import { CustomError } from "../../utils/error.util";
 import { Messages } from "../../constands/reqresMessages";
 import logger from "../../utils/logger.util";
@@ -13,6 +12,7 @@ import {
   UploadMediaRequest,
   UploadMediaResponse,
 } from "../../grpc/generated/post";
+import { HttpStatus } from "../../constands/http.status";
 
 export class MediaController implements IMediaController {
   constructor(private MediaService: IMediaService) {}
@@ -27,7 +27,7 @@ export class MediaController implements IMediaController {
       return uploadMediaResponse;
     } catch (err: any) {
       logger.error("delete Post error", { error: err.message });
-      throw new CustomError(grpc.status.INTERNAL, err.message);
+      throw new CustomError(HttpStatus.INTERNAL_SERVER_ERROR, err.message);
     }
   }
 
@@ -44,7 +44,7 @@ export class MediaController implements IMediaController {
        
     } catch (err:any) {
       logger.error("delete Post error", { error: err.message });
-      throw new CustomError(grpc.status.INTERNAL, err.message);
+      throw new CustomError(HttpStatus.INTERNAL_SERVER_ERROR, err.message);
     }
   }
 }

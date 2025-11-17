@@ -14,26 +14,26 @@ import {
 import { IfeedController } from "../interfaces/IfeedController";
 import { partial } from "zod/v4/core/util.cjs";
 import { IpostService } from "../../services/interfaces/IpostService";
-import * as grpc from "@grpc/grpc-js";
 import { CustomError } from "../../utils/error.util";
 import { Messages } from "../../constands/reqresMessages";
 import logger from "../../utils/logger.util";
+import { HttpStatus } from "../../constands/http.status";
 
 export class PostController implements IfeedController {
   constructor(private postService: IpostService) {}
 
-  async feedPosting(req: CreatePostRequest): Promise<CreatePostResponse> {
-    try {
-      const post = await this.postService.createPost(req);
-      return {
-        message: "Post created",
-        postId: post.postId,
-      };
-    } catch (err: any) {
-      logger.error("CreatePost error", { error: err.message });
-      throw new CustomError(grpc.status.INTERNAL, err.message);
-    }
-  }
+  // async feedPosting(req: CreatePostRequest): Promise<CreatePostResponse> {
+  //   try {
+  //     const post = await this.postService.createPost(req);
+  //     return {
+  //       message: "Post created",
+  //       postId: post.postId,
+  //     };
+  //   } catch (err: any) {
+  //     logger.error("CreatePost error", { error: err.message });
+  //     throw new CustomError(HttpStatus.INTERNAL_SERVER_ERROR, err.message);
+  //   }
+  // }
 
   async submitPostController(
     req: SubmitPostRequest
@@ -43,7 +43,7 @@ export class PostController implements IfeedController {
       return post;
     } catch (err: any) {
       logger.error("CreatePost error", { error: err.message });
-      throw new CustomError(grpc.status.INTERNAL, err.message);
+      throw new CustomError(HttpStatus.INTERNAL_SERVER_ERROR, err.message);
     }
   }
 
@@ -57,7 +57,7 @@ export class PostController implements IfeedController {
       return result;
     } catch (err: any) {
       logger.error("List posts error", { error: err.message });
-      throw new CustomError(grpc.status.INTERNAL, err.message);
+      throw new CustomError(HttpStatus.INTERNAL_SERVER_ERROR, err.message);
     }
   }
 
@@ -72,7 +72,7 @@ export class PostController implements IfeedController {
       return deletePost;
     } catch (err: any) {
       logger.error("delete Post error", { error: err.message });
-      throw new CustomError(grpc.status.INTERNAL, err.message);
+      throw new CustomError(HttpStatus.INTERNAL_SERVER_ERROR, err.message);
     }
   }
 

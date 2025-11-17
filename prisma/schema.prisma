@@ -1,8 +1,331 @@
+// // This is your Prisma schema file,
+// // learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// // Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// // Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+// generator client {
+//   provider = "prisma-client-js"
+// }
+
+// datasource db {
+//   provider = "postgresql"
+//   url      = env("DATABASE_URL")
+// }
+
+// enum PostType {
+//   TEXT
+//   ARTICLE
+//   POLL
+// }
+
+// enum Visibility {
+//   PUBLIC
+//   VISIBILITY_CONNECTIONS
+// }
+
+// enum CommentControl {
+//   ANYONE
+//   CONNECTIONS
+//   NONE
+// }
+
+// enum ReactionType {
+//   LIKE
+//   CELEBRATE
+//   SUPPORT
+//   LOVE
+//   INSIGHTFUL
+//   CURIOUS
+// }
+
+// enum TargetType {
+//   USER
+//   GROUP
+// }
+
+// enum MediaType {
+//   IMAGE
+//   VIDEO
+// }
+
+// enum OutboxStatus {
+//   PENDING
+//   SENDING
+//   SENT
+//   FAILED
+// }
+
+// enum IdempotencyStatus {
+//   IN_PROGRESS
+//   COMPLETED
+//   FAILED
+// }
+
+// // model Post {
+// //   id             String         @id @default(uuid())
+// //   userId         String
+// //   type           PostType
+// //   content        String?
+// //   tags           String[]       @default([])
+// //   imageMedia     Json[]         @default([])
+// //   videoMedia     Json[]         @default([])
+// //   visibility     Visibility
+// //   commentControl CommentControl
+// //   createdAt      DateTime       @default(now())
+// //   updatedAt      DateTime       @updatedAt
+// //   impressions    Int            @default(0)
+
+// //   // Relations
+// //   UserFeed   UserFeed[]
+// //   Comments   Comment[]
+// //   Shares     Share[]
+// //   Reactions  Reaction[]
+// //   Poll       Poll?
+// //   SavedPosts SavedPost[]
+// //   Reports    Report[]
+// //   // Media      Media[]
+// //   // @@index([mentions])
+
+// //   @@index([userId])
+// //   @@index([createdAt])
+// //   @@index([tags])
+// // }
+
+// // model Posts {
+// //   id                  String         @id @default(cuid())
+// //   content             String
+// //   userId              String
+
+// //   attachments         Media[]  
+// //   createdAt DateTime @default(now())
+// //   @@map("posts")
+// // }
+
+// model Posts {
+//   id         String     @id @default(cuid())
+//   content    String
+//   userId     String
+//   visibility Visibility @default(PUBLIC)
+//   tags       String[]   @default([]) // hashtags / topic tags
+
+//   // Denormalized counters for read-heavy access patterns
+//   likesCount    Int @default(0)
+//   commentsCount Int @default(0)
+//   sharesCount   Int @default(0)
+//   reportsCount  Int @default(0)
+//   impressions   Int @default(0)
+
+//   // Soft-delete and administrative flags
+//   deletedAt DateTime?
+//   pinned    Boolean   @default(false)
+//   pinnedAt  DateTime?
+
+//   // Poll relation (Poll.postId should reference this model's id)
+//   poll Poll?
+
+//   // Relations (inferred from other models' foreign keys)
+//   Comments     Comment[] // many comments per post
+//   Shares       Share[]
+//   Reactions    Reaction[]
+//   SavedPosts   SavedPost[]
+//   // Mentions: store server-detected @username mentions (create PostMention model)
+//   PostMentions PostMention[]
+//   Reports      Report[]
+//   attachments  Media[]
+
+//   createdAt DateTime   @default(now())
+//   updatedAt DateTime   @default(now()) @updatedAt
+//   userFeeds UserFeed[]
+
+//   @@index([userId])
+//   @@index([createdAt])
+//   @@index([tags])
+//   @@index([likesCount])
+//   @@index([commentsCount])
+//   @@index([impressions])
+//   @@map("posts")
+// }
+
+// model Media {
+//   id        String    @id @default(cuid())
+//   postId    String?
+//   Post      Posts?    @relation(fields: [postId], references: [id], onDelete: SetNull)
+//   type      MediaType
+//   url       String
+//   createdAt DateTime  @default(now())
+// }
+
+// model UserFeed {
+//   userId    String
+//   postId    String
+//   createdAt DateTime @default(now())
+
+//   Posts Posts @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+//   @@id([userId, postId])
+//   @@index([createdAt])
+// }
+
+// model Comment {
+//   id              String  @id @default(uuid())
+//   postId          String
+//   userId          String
+//   content         String
+//   parentCommentId String?
+
+//   createdAt DateTime @default(now())
+//   updatedAt DateTime   @default(now()) @updatedAt
+
+//   // Relations
+//   Post            Posts            @relation(fields: [postId], references: [id], onDelete: Cascade)
+//   ParentComment   Comment?         @relation("CommentReplies", fields: [parentCommentId], references: [id])
+//   Replies         Comment[]        @relation("CommentReplies")
+//   commentMentions CommentMention[]
+
+//   @@index([postId])
+//   @@index([userId])
+//   @@index([parentCommentId])
+//   @@index([createdAt])
+// }
+
+// // Comment mention (server-detected @username in comments)
+// model CommentMention {
+//   id              String   @id @default(uuid())
+//   commentId       String
+//   mentionedUserId String
+//   actorId         String
+//   createdAt       DateTime @default(now())
+
+//   Comment Comment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+
+//   @@index([commentId])
+//   @@index([mentionedUserId])
+//   @@index([actorId])
+// }
+
+// model Share {
+//   id         String     @id @default(uuid())
+//   postId     String
+//   userId     String
+//   targetType TargetType
+//   targetId   String
+//   comment    String?
+//   createdAt  DateTime   @default(now())
+
+//   Post Posts @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+//   @@index([postId])
+//   @@index([userId])
+//   @@index([targetId])
+//   @@index([createdAt])
+// }
+
+// model Reaction {
+//   id        String       @id @default(uuid())
+//   postId    String
+//   userId    String
+//   type      ReactionType
+//   createdAt DateTime     @default(now())
+
+//   Post Posts @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+//   @@unique([postId, userId, type])
+//   @@index([postId])
+//   @@index([userId])
+//   @@index([createdAt])
+// }
+
+// model Poll {
+//   id        String   @id @default(uuid())
+//   postId    String   @unique
+//   question  String
+//   options   Json[] // [{ id: string, text: string, votes: number }]
+//   duration  Int // Duration in days
+//   createdAt DateTime @default(now())
+
+//   Post Posts @relation(fields: [postId], references: [id], onDelete: Cascade)
+// }
+
+// model SavedPost {
+//   userId    String
+//   postId    String
+//   createdAt DateTime @default(now())
+//   Post      Posts    @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+//   @@id([userId, postId])
+//   @@index([userId])
+//   @@index([postId])
+//   @@index([createdAt])
+// }
+
+// model Report {
+//   id        String   @id @default(uuid())
+//   postId    String
+//   userId    String
+//   reason    String // "spam", "inappropriate"
+//   createdAt DateTime @default(now())
+//   Post      Posts    @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+//   @@index([postId])
+//   @@index([userId])
+// }
+
+// // Post mention (server-detected @username in posts)
+// model PostMention {
+//   id              String   @id @default(uuid())
+//   postId          String
+//   mentionedUserId String
+//   actorId         String
+//   createdAt       DateTime @default(now())
+
+//   Posts Posts @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+//   @@index([postId])
+//   @@index([mentionedUserId])
+//   @@index([actorId])
+// }
+
+// // Reliable outbox table for atomic event publishing
+// model OutboxEvent {
+//   id              String       @id @default(uuid())
+//   aggregateType   String
+//   aggregateId     String?
+//   type            String
+//   topic           String
+//   key             String?
+//   payload         Json
+//   status          OutboxStatus @default(PENDING)
+//   attempts        Int          @default(0)
+//   lastAttemptedAt DateTime?
+//   createdAt       DateTime     @default(now())
+//   publishedAt     DateTime?
+
+//   @@index([status])
+//   @@index([createdAt])
+//   @@index([aggregateType, aggregateId])
+// }
+
+// // Idempotency key store for client-side retries
+// model IdempotencyKey {
+//   id          String            @id @default(uuid())
+//   key         String            @unique
+//   userId      String
+//   method      String
+//   route       String
+//   requestHash String?
+//   response    Json?
+//   status      IdempotencyStatus @default(IN_PROGRESS)
+//   createdAt   DateTime          @default(now())
+//   updatedAt DateTime   @default(now()) @updatedAt
+
+//   @@index([userId])
+// }
+
+
+
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
 
 generator client {
   provider = "prisma-client-js"
@@ -39,9 +362,41 @@ enum ReactionType {
   CURIOUS
 }
 
+enum ReactionTargetType {
+  POST
+  COMMENT
+  REACTION_POST
+  REACTION_COMMENT
+}
+enum ShareType {
+  RESHARE
+  QUOTE
+}
+
 enum TargetType {
   USER
   GROUP
+}
+
+enum ReportTargetType {
+  POST
+  COMMENT
+}
+
+enum ReportStatus {
+  OPEN
+  INVESTIGATING
+  CLOSED
+}
+
+enum ReportReason {
+  SPAM
+  INAPPROPRIATE
+  HARASSMENT
+  HATE_SPEECH
+  VIOLENCE
+  SELF_HARM
+  OTHER
 }
 
 enum MediaType {
@@ -49,50 +404,111 @@ enum MediaType {
   VIDEO
 }
 
-model Post {
-  id             String         @id @default(uuid())
-  userId         String
-  type           PostType
-  content        String?
-  tags           String[]       @default([])
-  imageMedia     Json[]         @default([])
-  videoMedia     Json[]         @default([])
-  visibility     Visibility
-  commentControl CommentControl
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime       @updatedAt
-  impressions    Int            @default(0)
+enum OutboxStatus {
+  PENDING
+  SENDING
+  SENT
+  FAILED
+}
 
-  // Relations
-  UserFeed   UserFeed[]
-  Comments   Comment[]
-  Shares     Share[]
-  Reactions  Reaction[]
-  Poll       Poll?
-  SavedPosts SavedPost[]
-  Reports    Report[]
-  // Media      Media[]
-  // @@index([mentions])
+enum IdempotencyStatus {
+  IN_PROGRESS
+  COMPLETED
+  FAILED
+}
+
+enum HttpMethod {
+  GET
+  POST
+  PUT
+  PATCH
+  DELETE
+}
+
+enum OutboxAggregateType {
+  POST
+  COMMENT
+  REACTION
+  SHARE
+  REPORT
+  MENTION
+}
+
+enum OutboxEventType {
+  POST_LIKE_CREATED
+  POST_LIKE_REMOVED
+  POST_COMMENT_CREATED
+  POST_COMMENT_EDITED
+  POST_COMMENT_DELETED
+  COMMENT_LIKE_CREATED
+  COMMENT_LIKE_REMOVED
+  SHARE_CREATED
+  POST_REPORT_CREATED
+  POST_MENTION_IN_POST_CREATED
+  POST_MENTION_IN_COMMENT_CREATED
+}
+
+// enum KafkaTopic {
+//   ENGAGEMENT_EVENTS
+//   POST_LIKE_CREATED
+//   POST_LIKE_REMOVED
+//   POST_COMMENT_CREATED
+//   POST_COMMENT_UPDATED
+//   POST_COMMENT_DELETED
+//   POST_SHARE_CREATED
+//   POST_REPORT_CREATED
+//   POST_MENTION_IN_POST_CREATED
+//   POST_MENTION_IN_COMMENT_CREATED
+// }
+
+model Posts {
+  id         String     @id @default(cuid())
+  content    String
+  userId     String
+  visibility Visibility @default(PUBLIC)
+  tags       String[]   @default([]) // hashtags / topic tags
+
+  // Denormalized counters for read-heavy access patterns
+  likesCount    Int @default(0)
+  commentsCount Int @default(0)
+  sharesCount   Int @default(0)
+  reportsCount  Int @default(0)
+  impressions   Int @default(0)
+
+  // Soft-delete and administrative flags
+  deletedAt DateTime?
+  pinned    Boolean   @default(false)
+  pinnedAt  DateTime?
+
+  // Poll relation (Poll.postId should reference this model's id)
+  poll Poll?
+
+  // Relations (inferred from other models' foreign keys)
+  Comments     Comment[] // many comments per post
+  Shares       Share[]
+  Reactions    Reaction[]
+  SavedPosts   SavedPost[]
+  PostMentions PostMention[]
+  Reports      Report[]
+  attachments  Media[]
+
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @default(now()) @updatedAt
+  userFeeds UserFeed[]
 
   @@index([userId])
   @@index([createdAt])
   @@index([tags])
-}
-
-model Posts {
-  id                  String         @id @default(cuid())
-  content             String
-  userId              String
-  
-  attachments         Media[]  
-  createdAt DateTime @default(now())
+  @@index([likesCount])
+  @@index([commentsCount])
+  @@index([impressions])
   @@map("posts")
 }
 
 model Media {
   id        String    @id @default(cuid())
   postId    String?
-  Post      Posts?     @relation(fields: [postId], references: [id], onDelete: SetNull)
+  Post      Posts?    @relation(fields: [postId], references: [id], onDelete: SetNull)
   type      MediaType
   url       String
   createdAt DateTime  @default(now())
@@ -103,43 +519,69 @@ model UserFeed {
   postId    String
   createdAt DateTime @default(now())
 
-  Post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  Posts Posts @relation(fields: [postId], references: [id], onDelete: Cascade)
 
   @@id([userId, postId])
   @@index([createdAt])
 }
 
 model Comment {
-  id              String  @id @default(uuid())
+  id              String   @id @default(uuid())
   postId          String
   userId          String
   content         String
   parentCommentId String?
 
+  likesCount    Int @default(0)
+  // Soft delete and versioning
+  deletedAt DateTime?
+  editedAt  DateTime?
+  version   Int      @default(1)
+
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt DateTime @default(now()) @updatedAt
 
   // Relations
-  Post          Post      @relation(fields: [postId], references: [id], onDelete: Cascade)
-  ParentComment Comment?  @relation("CommentReplies", fields: [parentCommentId], references: [id])
-  Replies       Comment[] @relation("CommentReplies")
-
+  Post            Posts            @relation(fields: [postId], references: [id], onDelete: Cascade)
+  ParentComment   Comment?         @relation("CommentReplies", fields: [parentCommentId], references: [id])
+  Replies         Comment[]        @relation("CommentReplies")
+  commentMentions CommentMention[]
+  Reports         Report[]
+  Reactions       Reaction[]
   @@index([postId])
   @@index([userId])
   @@index([parentCommentId])
   @@index([createdAt])
+  @@index([deletedAt])
+}
+
+// Comment mention (server-detected @username in comments)
+model CommentMention {
+  id              String   @id @default(uuid())
+  commentId       String
+  mentionedUserId String
+  actorId         String
+  createdAt       DateTime @default(now())
+
+  Comment Comment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+
+  @@unique([commentId, mentionedUserId]) // Prevent duplicate mentions
+  @@index([commentId])
+  @@index([mentionedUserId])
+  @@index([actorId])
 }
 
 model Share {
-  id         String     @id @default(uuid())
+  id         String    @id @default(uuid())
   postId     String
   userId     String
-  targetType TargetType
-  targetId   String
-  comment    String?
-  createdAt  DateTime   @default(now())
+  shareType  ShareType @default(RESHARE)
+  caption    String?
+  targetType TargetType @default(USER)
+  targetId   String?
+  createdAt  DateTime  @default(now())
 
-  Post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  Post Posts @relation(fields: [postId], references: [id], onDelete: Cascade)
 
   @@index([postId])
   @@index([userId])
@@ -147,19 +589,42 @@ model Share {
   @@index([createdAt])
 }
 
+// model Reaction {
+//   id        String       @id @default(uuid())
+//   postId    String
+//   userId    String
+//   type      ReactionType @default(LIKE)
+//   createdAt DateTime     @default(now())
+//   deletedAt DateTime?    // Soft delete for unlike
+
+//   Post Posts @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+//   @@unique([postId, userId, type])
+//   @@index([postId])
+//   @@index([userId])
+//   @@index([createdAt])
+//   @@index([deletedAt])
+// }
 model Reaction {
   id        String       @id @default(uuid())
-  postId    String
+  postId    String?      // Optional - for post likes
+  commentId String?      // Optional - for comment likes
   userId    String
-  type      ReactionType
+  type      ReactionType @default(LIKE)
   createdAt DateTime     @default(now())
+  deletedAt DateTime?    // Soft delete for unlike
+  targetType ReactionTargetType
 
-  Post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  Post    Posts?    @relation(fields: [postId], references: [id], onDelete: Cascade)
+  Comment Comment?  @relation(fields: [commentId], references: [id], onDelete: Cascade)
 
   @@unique([postId, userId, type])
+  @@unique([commentId, userId, type])
   @@index([postId])
+  @@index([commentId])
   @@index([userId])
   @@index([createdAt])
+  @@index([deletedAt])
 }
 
 model Poll {
@@ -170,14 +635,14 @@ model Poll {
   duration  Int // Duration in days
   createdAt DateTime @default(now())
 
-  Post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  Post Posts @relation(fields: [postId], references: [id], onDelete: Cascade)
 }
 
 model SavedPost {
   userId    String
   postId    String
   createdAt DateTime @default(now())
-  Post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  Post      Posts    @relation(fields: [postId], references: [id], onDelete: Cascade)
 
   @@id([userId, postId])
   @@index([userId])
@@ -186,13 +651,78 @@ model SavedPost {
 }
 
 model Report {
-  id        String   @id @default(uuid())
-  postId    String
-  userId    String
-  reason    String // "spam", "inappropriate"
-  createdAt DateTime @default(now())
-  Post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  id         String          @id @default(uuid())
+  reporterId String
+  targetType ReportTargetType
+  targetId   String // postId or commentId
+  postId     String? // For comments, we need postId for cascade
+  commentId  String? // For comments
+  reason     ReportReason
+  status     ReportStatus    @default(OPEN)
+  metadata   Json? // Additional context
+  resolvedAt DateTime?
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @default(now()) @updatedAt
 
+  Post    Posts?    @relation(fields: [postId], references: [id], onDelete: Cascade)
+  Comment Comment?  @relation(fields: [commentId], references: [id], onDelete: Cascade)
+
+  @@index([targetType, targetId])
+  @@index([reporterId])
+  @@index([status])
+  @@index([createdAt])
+  @@unique([reporterId, targetType, targetId]) // One report per user per target
+}
+
+// Post mention (server-detected @username in posts)
+model PostMention {
+  id              String   @id @default(uuid())
+  postId          String
+  mentionedUserId String
+  actorId         String
+  createdAt       DateTime @default(now())
+
+  Posts Posts @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, mentionedUserId]) // Prevent duplicate mentions
   @@index([postId])
+  @@index([mentionedUserId])
+  @@index([actorId])
+}
+
+// Reliable outbox table for atomic event publishing
+model OutboxEvent {
+  id              String       @id @default(uuid())
+  aggregateType   OutboxAggregateType
+  aggregateId     String?
+  type            OutboxEventType
+  topic           String
+  key             String?
+  payload         Json
+  status          OutboxStatus @default(PENDING)
+  attempts        Int          @default(0)
+  lastAttemptedAt DateTime?
+  createdAt       DateTime     @default(now())
+  publishedAt     DateTime?
+
+  @@index([status])
+  @@index([createdAt])
+  @@index([aggregateType, aggregateId])
+}
+
+// Idempotency key store for client-side retries
+model IdempotencyKey {
+  id          String            @id @default(uuid())
+  key         String            @unique
+  userId      String
+  method      HttpMethod
+  route       String
+  requestHash String?
+  response    Json?
+  status      IdempotencyStatus @default(IN_PROGRESS)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @default(now()) @updatedAt
+
   @@index([userId])
+  @@index([key])
 }

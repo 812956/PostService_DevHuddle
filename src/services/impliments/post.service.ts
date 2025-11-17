@@ -15,7 +15,7 @@ import {
 } from "../../repositories/interface/IPostRepository";
 import { IpostService } from "../interfaces/IpostService";
 import { CustomError } from "../../utils/error.util";
-import { PostMapper } from "../../mapper/post.mapper";
+// import { PostMapper } from "../../mapper/post.mapper";
 import logger from "../../utils/logger.util";
 import * as grpc from "@grpc/grpc-js";
 import { IMediaRepository } from "../../repositories/interface/IMediaRepository";
@@ -23,16 +23,16 @@ import { IMediaRepository } from "../../repositories/interface/IMediaRepository"
 export class PostSerive implements IpostService {
   constructor(private postRepository: IPostRepository) {}
 
-  async createPost(payload: CreatePostRequest) {
-    try {
-      const newPost = PostMapper.toPost(payload);
-      const { postId } = await this.postRepository.createPostLogics(newPost);
-      return { postId };
-    } catch (err: any) {
-      logger.error("CreatePost error", { error: err.message });
-      throw new CustomError(grpc.status.INTERNAL, err.message);
-    }
-  }
+  // async createPost(payload: CreatePostRequest) {
+  //   try {
+  //     const newPost = PostMapper.toPost(payload);
+  //     const { postId } = await this.postRepository.createPostLogics(newPost);
+  //     return { postId };
+  //   } catch (err: any) {
+  //     logger.error("CreatePost error", { error: err.message });
+  //     throw new CustomError(grpc.status.INTERNAL, err.message);
+  //   }
+  // }
 
   async submitPost(req: SubmitPostRequest): Promise<SubmitPostResponse> {
     try {

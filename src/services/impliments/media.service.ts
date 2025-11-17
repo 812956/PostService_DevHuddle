@@ -1,20 +1,11 @@
-import { Status } from "@grpc/grpc-js/build/src/constants";
 import {
-  DeleteUnusedMediasRequest,
-  DeleteUnusedMediasResponse,
   Media,
   UploadMediaRequest,
   UploadMediaResponse,
 } from "../../grpc/generated/post";
-import {
-  IPostRepository,
-  PostSelectOptions,
-} from "../../repositories/interface/IPostRepository";
-import { IpostService } from "../interfaces/IpostService";
+import { HttpStatus } from "../../constands/http.status";
 import { CustomError } from "../../utils/error.util";
-import { PostMapper } from "../../mapper/post.mapper";
 import logger from "../../utils/logger.util";
-import * as grpc from "@grpc/grpc-js";
 import { IMediaRepository } from "../../repositories/interface/IMediaRepository";
 import {
   CleanupResult,
@@ -33,7 +24,7 @@ export class MediaService implements IMediaService {
       return { mediaId };
     } catch (err: any) {
       logger.error("delete Post error", { error: err.message });
-      throw new CustomError(grpc.status.INTERNAL, err.message);
+      throw new CustomError(HttpStatus.INTERNAL_SERVER_ERROR, err.message);
     }
   }
 
@@ -67,7 +58,7 @@ export class MediaService implements IMediaService {
 
     } catch (err: any) {
       logger.error("delete Medias error", { error: err.message });
-      throw new CustomError(grpc.status.INTERNAL, err.message);
+      throw new CustomError(HttpStatus.INTERNAL_SERVER_ERROR, err.message);
     }
   }
 }

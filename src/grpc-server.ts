@@ -36,7 +36,7 @@ const mediaController = new MediaController(mediaService);
 
 
 const postServiceActions: PostServiceServer = {
-  createPost: grpcHandler(postController.feedPosting.bind(postController)),
+  // createPost: grpcHandler(postController.feedPosting.bind(postController)),
   listPosts: grpcHandler(postController.getPostsController.bind(postController)),
   uploadMedia: grpcHandler(
     mediaController.uploadMediaController.bind(mediaController)

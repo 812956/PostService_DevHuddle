@@ -1,5 +1,8 @@
 syntax = "proto3";
 
+
+// Message definitions
+
 message getUserForFeedListingRequest {
    string userId = 1;
 }
@@ -10,7 +13,23 @@ message getUserForFeedListingResponse {
     string username = 3;
 }
 
+message ResolveUsernamesRequest {
+  repeated string usernames = 1;
+}
+
+message ResolvedUser {
+  string id = 1;
+  string username = 2;
+  string displayName = 3;
+  string avatarUrl = 4;
+}
+
+message ResolveUsernamesResponse {
+  repeated ResolvedUser users = 1;
+}
+
 service UserService {
   // User-related methods
   rpc getUserForFeedListing (getUserForFeedListingRequest) returns (getUserForFeedListingResponse);
+  rpc ResolveUsernames (ResolveUsernamesRequest) returns (ResolveUsernamesResponse);
 }

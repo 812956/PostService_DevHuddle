@@ -5,7 +5,7 @@ import {
 import { BaseRepository } from "./base.repository";
 import { prisma } from "../../config/prisma.config";
 import logger from "../../utils/logger.util";
-import { Post, Posts, Prisma } from ".prisma/client";
+import { Posts, Prisma } from ".prisma/client";
 import { resolve } from "path";
 import { userClient } from "../../config/grpc.client";
 import { response } from "express";
@@ -18,20 +18,20 @@ import { error } from "console";
 
 export class PostRepository
   extends BaseRepository<
-    typeof prisma.post,
-    Post,
-    Prisma.PostCreateInput,
-    Prisma.PostUpdateInput,
-    Prisma.PostWhereInput
+    typeof prisma.posts,
+    Posts,
+    Prisma.PostsCreateInput,
+    Prisma.PostsUpdateInput,
+    Prisma.PostsWhereInput
   >
   implements IPostRepository
 {
   constructor() {
-    super(prisma.post);
+    super(prisma.posts);
   }
 
   async createPostLogics(
-    data: Partial<Prisma.PostCreateInput>
+    data: Partial<Prisma.PostsCreateInput>
   ): Promise<{ postId: string }> {
     try {
       const { id: postId } = await super.create(data);
@@ -137,4 +137,115 @@ export class PostRepository
       throw new Error("Database error");
     }
   }
+
+
+  async incrementLikesCount(postId: string): Promise<void> {
+    try {
+      await prisma.posts.update({
+        where: { id: postId },
+        data: {
+          likesCount: {
+            increment: 1,
+          },
+        },
+      });
+    } catch (error: any) {
+      logger.error("Error incrementing likes count", {
+        error: (error as Error).message,
+      });
+      throw new Error("Database error");
+    }
+  }
+
+
+  async decrementLikesCount(postId: string): Promise<void> {
+    try {
+      await prisma.posts.update({
+        where: { id: postId },
+        data: {
+          likesCount: {
+            decrement: 1,
+          },
+        },
+      });
+    } catch (error: any) {
+      logger.error("Error decrementing likes count", {
+        error: (error as Error).message,
+      });
+      throw new Error("Database error");
+    }
+  }
+
+  async incrementCommentsCount(postId: string): Promise<void> {
+    try {
+      await prisma.posts.update({
+        where: { id: postId },
+        data: {
+          commentsCount: {
+            increment: 1,
+          },
+        },
+      });
+    } catch (error: any) {
+      logger.error("Error incrementing comments count", {
+        error: (error as Error).message,
+      });
+      throw new Error("Database error");
+    }
+  }
+
+  async decrementCommentsCount(postId: string): Promise<void> {
+    try {
+      await prisma.posts.update({
+        where: { id: postId },
+        data: {
+          commentsCount: {
+            decrement: 1,
+          },
+        },
+      });
+    } catch (error: any) {
+      logger.error("Error decrementing comments count", {
+        error: (error as Error).message,
+      });
+      throw new Error("Database error");
+    }
+  }
+
+  async incrementSharesCount(postId: string): Promise<void> {
+    try {
+      await prisma.posts.update({
+        where: { id: postId },
+        data: {
+          sharesCount: {
+            increment: 1,
+          },
+        },
+      });
+    } catch (error: any) {
+      logger.error("Error incrementing shares count", {
+        error: (error as Error).message,
+      });
+      throw new Error("Database error");
+    }
+  }
+
+  async incrementReportsCount(postId: string): Promise<void> {
+    try {
+      await prisma.posts.update({
+        where: { id: postId },
+        data: {
+          reportsCount: {
+            increment: 1,
+          },
+        },
+      });
+    } catch (error: any) {
+      logger.error("Error incrementing reports count", {
+        error: (error as Error).message,
+      });
+      throw new Error("Database error");
+    }
+  }
+
 }
