@@ -28,8 +28,35 @@ message ResolveUsernamesResponse {
   repeated ResolvedUser users = 1;
 }
 
+message CheckFollowRequest {
+  string followerId = 1;
+  string followingId = 2;
+}
+
+message CheckFollowResponse {
+  bool isFollowing = 1;
+}
+
+// ✅ NEW: Get followers for fan-out pattern
+message GetFollowersRequest {
+  string userId = 1;
+}
+
+message Follower {
+  string id = 1;
+  string username = 2;
+  string name = 3;
+}
+
+message GetFollowersResponse {
+  repeated Follower followers = 1;
+}
+
 service UserService {
   // User-related methods
   rpc getUserForFeedListing (getUserForFeedListingRequest) returns (getUserForFeedListingResponse);
   rpc ResolveUsernames (ResolveUsernamesRequest) returns (ResolveUsernamesResponse);
+  rpc CheckFollow (CheckFollowRequest) returns (CheckFollowResponse);
+  // ✅ NEW: Get followers for feed fan-out
+  rpc GetFollowers (GetFollowersRequest) returns (GetFollowersResponse);
 }

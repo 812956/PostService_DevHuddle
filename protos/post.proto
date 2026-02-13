@@ -105,6 +105,15 @@ message Post {
   string createdAt = 4;
   FeedUserProfileDetiles user = 5;
   repeated Attachments attachments = 6;
+  PostEngagement engagement = 7;
+}
+
+message PostEngagement {
+  int32 likesCount = 1;
+  int32 commentsCount = 2;
+  int32 sharesCount = 3;
+  bool isLiked = 4;
+  bool isShared = 5;
 }
 
 
@@ -127,6 +136,7 @@ message CreatePostResponse {
 
 message ListPostsRequest {
   optional string pageParam = 1;
+  optional string userId = 2;
 }
 
 message ListPostsResponse{
@@ -147,6 +157,8 @@ message SubmitPostRequest {
   string content = 1;
   string userId = 2;
   repeated string mediaIds = 3;
+  string visibility = 4; // ✅ FIXED P0-2: Add visibility (PUBLIC, VISIBILITY_CONNECTIONS)
+  string commentControl = 5; // ✅ FIXED P0-2: Add commentControl (ANYONE, CONNECTIONS, NONE)
 }
 
 message SubmitPostResponse {
@@ -176,6 +188,118 @@ message DeleteUnusedMediasResponse {
 
 
 
+// Report messages
+message ReportPostRequest {
+  string post_id = 1;
+  string user_id = 2;
+  string reason = 3; // ReportReason enum as string
+  optional string description = 4;
+  string idempotency_key = 5;
+}
+
+message ReportPostResponse {
+  bool success = 1;
+  string report_id = 2;
+  string message = 3;
+}
+
+// Share link messages
+message GetPostShareLinkRequest {
+  string post_id = 1;
+  string user_id = 2;
+  bool generate_short = 3;
+  bool is_private = 4;
+}
+
+message GetPostShareLinkResponse {
+  string canonical_url = 1;
+  optional string short_url = 2;
+  optional string share_token = 3;
+  optional int64 expires_at = 4;
+}
+
+message ResolveShareLinkRequest {
+  string token_or_short_id = 1;
+}
+
+message ResolveShareLinkResponse {
+  string post_id = 1;
+  string redirect_url = 2;
+}
+
+// Share post messages
+message SharePostRequest {
+  string original_post_id = 1;
+  string user_id = 2;
+  string share_type = 3; // ShareType enum as string
+  optional string comment = 4;
+  string visibility = 5; // PostVisibility enum as string
+  optional string shared_to_user_id = 6; // For PRIVATE_MESSAGE
+  string idempotency_key = 7;
+}
+
+message SharePostResponse {
+  bool success = 1;
+  string share_id = 2;
+  Share share = 3;
+}
+
+message Share {
+  string id = 1;
+  string post_id = 2;
+  string user_id = 3;
+  string share_type = 4;
+  optional string caption = 5;
+  string visibility = 6;
+  string created_at = 7;
+}
+
+// Edit post messages
+message EditPostRequest {
+  string post_id = 1;
+  string user_id = 2;
+  optional string content = 3;
+  repeated string add_attachment_ids = 4;
+  repeated string remove_attachment_ids = 5;
+  string idempotency_key = 6;
+}
+
+message EditPostResponse {
+  bool success = 1;
+  Post post = 2;
+  int32 new_version_number = 3;
+}
+
+message GetPostVersionsRequest {
+  string post_id = 1;
+  string user_id = 2;
+}
+
+message GetPostVersionsResponse {
+  repeated PostVersion versions = 1;
+}
+
+message PostVersion {
+  string id = 1;
+  string post_id = 2;
+  int32 version_number = 3;
+  string content = 4;
+  repeated string attachment_ids = 5;
+  string edited_at = 6;
+  string edited_by_id = 7;
+}
+
+message RestorePostVersionRequest {
+  string post_id = 1;
+  int32 version_number = 2;
+  string user_id = 3;
+}
+
+message RestorePostVersionResponse {
+  bool success = 1;
+  Post post = 2;
+}
+
 // Service definition
 
 service PostService {
@@ -185,4 +309,13 @@ service PostService {
   rpc SubmitPost (SubmitPostRequest) returns (SubmitPostResponse);
   rpc DeletePost (DeletePostRequest) returns (DeletePostResponse);
   rpc DeleteUnusedMedias (DeleteUnusedMediasRequest) returns (DeleteUnusedMediasResponse);
+  
+  // New endpoints for production features
+  rpc ReportPost (ReportPostRequest) returns (ReportPostResponse);
+  rpc GetPostShareLink (GetPostShareLinkRequest) returns (GetPostShareLinkResponse);
+  rpc ResolveShareLink (ResolveShareLinkRequest) returns (ResolveShareLinkResponse);
+  rpc SharePost (SharePostRequest) returns (SharePostResponse);
+  rpc EditPost (EditPostRequest) returns (EditPostResponse);
+  rpc GetPostVersions (GetPostVersionsRequest) returns (GetPostVersionsResponse);
+  rpc RestorePostVersion (RestorePostVersionRequest) returns (RestorePostVersionResponse);
 }

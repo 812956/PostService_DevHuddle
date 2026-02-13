@@ -8,10 +8,13 @@ export interface IReportRepository {
     postId?: string;
     commentId?: string;
     reason: string;
+    severity?: string;
+    description?: string;
+    status?: string;
     metadata?: any;
   }): Promise<Report>;
   findReport(reporterId: string, targetType: string, targetId: string): Promise<Report | null>;
   getReportsByTarget(targetType: string, targetId: string): Promise<Report[]>;
-  updateReportStatus(reportId: string, status: string, resolvedAt?: Date): Promise<Report>;
+  updateReportStatus(reportId: string, status: string, resolvedAt?: Date, reviewedById?: string, resolution?: string): Promise<Report>;
   getReportCount(targetType: string, targetId: string): Promise<number>;
 }

@@ -7,8 +7,8 @@ import { HttpStatus } from "../../constands/http.status";
 
 export class MentionController {
   constructor(
-    private mentionRepository: IMentionRepository,
-    private mentionService: IMentionService
+    private _mentionRepository: IMentionRepository,
+    private _mentionService: IMentionService
   ) {}
 
   /**
@@ -23,7 +23,7 @@ export class MentionController {
         throw new CustomError(HttpStatus.BAD_REQUEST, "Post ID is required");
       }
 
-      const mentions = await this.mentionRepository.getPostMentions(postId);
+      const mentions = await this._mentionRepository.getPostMentions(postId as string);
 
       res.status(HttpStatus.OK).json({
         success: true,
@@ -47,7 +47,7 @@ export class MentionController {
         throw new CustomError(HttpStatus.BAD_REQUEST, "Comment ID is required");
       }
 
-      const mentions = await this.mentionRepository.getCommentMentions(commentId);
+      const mentions = await this._mentionRepository.getCommentMentions(commentId as string);
 
       res.status(HttpStatus.OK).json({
         success: true,
@@ -85,7 +85,7 @@ export class MentionController {
         throw new CustomError(HttpStatus.BAD_REQUEST, "Cannot provide both postId and commentId");
       }
 
-      const mentionedUserIds = await this.mentionService.processMentions(
+      const mentionedUserIds = await this._mentionService.processMentions(
         content,
         postId,
         commentId,

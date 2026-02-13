@@ -7,7 +7,7 @@ import {
   UploadMediaRequest,
 } from "../../grpc/generated/post";
 import logger from "../../utils/logger.util";
-import { UTApi } from "uploadthing/server";
+import { v4 as uuidv4 } from "uuid";
 
 export class MediaRepository
   extends BaseRepository<
@@ -19,20 +19,22 @@ export class MediaRepository
   >
   implements IMediaRepository
 {
-  private utapi: UTApi;
-
   constructor() {
     super(prisma.media);
-    this.utapi = new UTApi();
   }
 
   async createMedia(data: UploadMediaRequest): Promise<string> {
     try {
-      const { id: mediaId } = await super.create(data as any);
+      // ✅ FIX: Generate ID for Media (same as posts)
+      const { id: mediaId } = await super.create({
+        ...data,
+        id: uuidv4(), // Generate ID using UUID v4
+      } as any);
       return mediaId;
     } catch (error: any) {
       logger.error("Error creating entity", {
         error: (error as Error).message,
+        stack: (error as Error).stack,
       });
       throw new Error("Database error");
     }
@@ -64,17 +66,19 @@ export class MediaRepository
     }
   }
 
+  /**
+   * ✅ REMOVED: deleteFilesFromUploadThing
+   * 
+   * This method is no longer needed as we use Media Service for all media operations.
+   * Media deletion is handled by Media Service, which manages R2 storage.
+   * 
+   * If you need to delete media, use the Media Service API:
+   * DELETE /api/v1/media/{mediaId}
+   */
   async deleteFilesFromUploadThing(urls: string[]): Promise<void> {
-    if (urls.length === 0) return;
-
-    const fileKeys = urls
-      .map((url) => {
-        const appId = process.env.NEXT_PUBLIC_UPLOADTHING_APP_ID!;
-        return url.split("/f/")[1]; // Handle both formats
-      })
-      .filter(Boolean);
-
-    await this.utapi.deleteFiles(fileKeys);
+    // This method is deprecated - media deletion is handled by Media Service
+    logger.warn("deleteFilesFromUploadThing is deprecated. Use Media Service API instead.");
+    return;
   }
 
   async deleteUnusedMediaRepo(mediaIds: string[]): Promise<number> {

@@ -23,7 +23,7 @@ export class MentionRepository implements IMentionRepository {
           postId: data.postId,
           mentionedUserId: data.mentionedUserId,
           actorId: data.actorId,
-        },
+        } as any, // Type assertion - id will be auto-generated
       });
     } catch (error: any) {
       logger.error("Error creating post mention", { error: error.message });
@@ -49,7 +49,7 @@ export class MentionRepository implements IMentionRepository {
           commentId: data.commentId,
           actorId: data.actorId,
           mentionedUserId: data.mentionedUserId,
-        },
+        } as any, // Type assertion - id will be auto-generated
       });
     } catch (error: any) {
       logger.error("Error creating comment mention", { error: error.message });

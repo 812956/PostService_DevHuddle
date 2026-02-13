@@ -8,7 +8,7 @@ import { Messages } from "../../constands/reqresMessages";
 import { IShareController } from "../../controllers/interfaces/IShareController";
 
 export class ShareController implements IShareController {
-  constructor(private shareService: IShareService) {}
+  constructor(private _shareService: IShareService) {}
 
   async sharePost(
     req: Request,
@@ -18,7 +18,7 @@ export class ShareController implements IShareController {
     try {
       const { postId } = req.params;
       const userId = getUserIdFromRequest(req);
-      const { shareType, caption, targetType } = req.body;
+      const { shareType, caption, targetType, visibility, sharedToUserId } = req.body;
 
       if (!userId) {
         throw new CustomError(HttpStatus.UNAUTHORIZED, Messages.USER_NOT_FOUND);
@@ -31,32 +31,21 @@ export class ShareController implements IShareController {
         );
       }
 
-      if (
-        !shareType ||
-        (shareType !== ShareType.RESHARE && shareType !== ShareType.QUOTE)
-      ) {
+      if (!shareType) {
         throw new CustomError(
           HttpStatus.BAD_REQUEST,
-          Messages.SHARE_TYPE_MUST_BE_RESHARE_QUOTE
+          "Share type is required"
         );
       }
 
-      if (
-        !targetType ||
-        (targetType !== TargetType.GROUP && targetType !== TargetType.USER)
-      ) {
-        throw new CustomError(
-          HttpStatus.BAD_REQUEST,
-          "Invalid Target type , Must be User or Group"
-        );
-      }
-
-      const share = await this.shareService.sharePost(
-        postId,
+      const share = await this._shareService.sharePost(
+        postId as string,
         userId,
-        shareType as ShareType,
+        shareType,
+        targetType,
         caption,
-        targetType as TargetType
+        visibility,
+        sharedToUserId
       );
 
       res.status(HttpStatus.CREATED).json({
@@ -84,7 +73,7 @@ export class ShareController implements IShareController {
         );
       }
 
-      const count = await this.shareService.getShareCount(postId);
+      const count = await this._shareService.getShareCount(postId as string);
 
       res.status(HttpStatus.OK).json({
         success: true,
@@ -115,7 +104,7 @@ export class ShareController implements IShareController {
         );
       }
 
-      const hasShared = await this.shareService.hasShared(postId, userId);
+      const hasShared = await this._shareService.hasShared(postId as string, userId);
 
       res.status(HttpStatus.OK).json({
         success: true,

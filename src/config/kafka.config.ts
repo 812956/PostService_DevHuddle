@@ -1,7 +1,7 @@
 import { KafkaConfig } from "kafkajs";
 
 export const KAFKA_CONFIG: KafkaConfig = {
-  brokers: [process.env.KAFKA_BROKER || "localhost:9092"],
+  brokers: [process.env.KAFKA_BROKER || "kafka:9092"],
   clientId: process.env.KAFKA_CLIENT_ID || "post-service",
   retry: {
     initialRetryTime: 100,
@@ -31,9 +31,13 @@ export const KAFKA_TOPICS = {
     POST_COMMENT_EDITED_DLQ: "post.comment.edited.v1-dlq",
     POST_COMMENT_DELETED_DLQ: "post.comment.deleted.v1-dlq",
   
-    // Share events
-    POST_SHARED: "post.shared.v1",
-    POST_SHARED_DLQ: "post.shared.v1-dlq",
+    // Send Post events (LinkedIn-style)
+    POST_SENT: "post.sent.v1",
+    POST_SENT_DLQ: "post.sent.v1-dlq",
+  
+    // ✅ NEW: Post creation events (for fan-out and notifications)
+    POST_CREATED: "post.created.v1",
+    POST_CREATED_DLQ: "post.created.v1-dlq",
   
     // Report events
     POST_REPORTED: "post.reported.v1",
@@ -42,4 +46,8 @@ export const KAFKA_TOPICS = {
     // Mention events
     USER_MENTIONED: "user.mentioned.v1",
     USER_MENTIONED_DLQ: "user.mentioned.v1-dlq",
+
+    // Post Deletion events
+    POST_DELETED: "post.deleted.v1",
+    POST_DELETED_DLQ: "post.deleted.v1-dlq",
   } as const;

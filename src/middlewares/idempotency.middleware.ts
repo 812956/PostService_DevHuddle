@@ -14,8 +14,8 @@ export const idempotencyMiddleware = (
       return next();
     }
 
-    const idempotencyKey = req.headers["idempotency-key"] as string;
-    const userId = (req as any).user?.userId || (req as any).user?.id;
+    const idempotencyKey = req.headers["Idempotency-Key"] as string;
+    const userId = JSON.parse(req.headers["x-user-data"] as string).id;
 
     if (!idempotencyKey) {
       return next(); // Optional - can skip if no key provided

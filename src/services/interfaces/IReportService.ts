@@ -3,7 +3,8 @@ export interface IReportService {
       postId: string,
       reporterId: string,
       reason: string,
-      metadata?: any
+      metadata?: any,
+      description?: string
     ): Promise<any>;
     reportComment(
       commentId: string,

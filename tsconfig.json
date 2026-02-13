@@ -12,7 +12,9 @@
     "baseUrl": "./src",
     "paths": {
       "*": ["node_modules/*"]
-    }
+    },
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true
   },
   "include": ["src/**/*", "src/generate.ts","node_modules/@prisma/client"],
   "exclude": ["node_modules"]

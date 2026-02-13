@@ -34,7 +34,8 @@ export interface ICommentRepository {
     includeMentions?: boolean
   ): Promise<Comment[]>;
   getCommentCount(postId: string): Promise<number>;
-  getReplies(commentId: string, limit?: number): Promise<Comment[]>;
+  getReplies(commentId: string, limit?: number, offset?: number): Promise<Comment[]>;
+  getReplyCount(commentId: string): Promise<number>;
   incrementLikesCount(commentId: string): Promise<void>;
   decrementLikesCount(commentId: string): Promise<void>;
 }

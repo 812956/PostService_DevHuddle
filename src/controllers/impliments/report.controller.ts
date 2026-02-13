@@ -5,29 +5,32 @@ import logger from "../../utils/logger.util";
 import { ReportReason } from "@prisma/client";
 import { IReportController } from "../interfaces/IReportController";
 import { HttpStatus } from "../../constands/http.status";
+import { getUserIdFromRequest } from "../../utils/request.util";
 
 export class ReportController implements IReportController {
-  constructor(private reportService: IReportService) {}
+  constructor(private _reportService: IReportService) {}
 
   async reportPost(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { postId } = req.params;
-      const { reason, metadata } = req.body;
-      const reporterId = (req as any).user?.userId || (req as any).user?.id;
-
-      if (!reporterId) {
-        throw new CustomError(HttpStatus.UNAUTHORIZED, "Unauthorized");
-      }
+      const { reason, metadata, description } = req.body;
+      
+      // ✅ FIX: Use getUserIdFromRequest to extract userId from x-user-data header
+      const reporterId = getUserIdFromRequest(req);
 
       if (!postId) {
         throw new CustomError(HttpStatus.BAD_REQUEST, "Post ID is required");
       }
 
-      if (!reason || !Object.values(ReportReason).includes(reason)) {
-        throw new CustomError(HttpStatus.BAD_REQUEST, "Valid report reason is required");
-      }
+      // Validation handled by DTO
 
-      const report = await this.reportService.reportPost(postId, reporterId, reason, metadata);
+      const report = await this._reportService.reportPost(
+        postId as string,
+        reporterId,
+        reason,
+        metadata,
+        description
+      );
 
       res.status(HttpStatus.CREATED).json({
         success: true,
@@ -43,21 +46,17 @@ export class ReportController implements IReportController {
     try {
       const { commentId } = req.params;
       const { reason, metadata } = req.body;
-      const reporterId = (req as any).user?.userId || (req as any).user?.id;
-
-      if (!reporterId) {
-        throw new CustomError(HttpStatus.UNAUTHORIZED, "Unauthorized");
-      }
+      
+      // ✅ FIX: Use getUserIdFromRequest to extract userId from x-user-data header
+      const reporterId = getUserIdFromRequest(req);
 
       if (!commentId) {
         throw new CustomError(HttpStatus.BAD_REQUEST, "Comment ID is required");
       }
 
-      if (!reason || !Object.values(ReportReason).includes(reason)) {
-        throw new CustomError(HttpStatus.BAD_REQUEST, "Valid report reason is required");
-      }
+      // Validation handled by DTO
 
-      const report = await this.reportService.reportComment(commentId, reporterId, reason, metadata);
+      const report = await this._reportService.reportComment(commentId as string, reporterId, reason, metadata);
 
       res.status(HttpStatus.CREATED).json({
         success: true,
@@ -77,7 +76,7 @@ export class ReportController implements IReportController {
         throw new CustomError(HttpStatus.BAD_REQUEST, "Target type and target ID are required");
       }
 
-      const count = await this.reportService.getReportCount(targetType as string, targetId as string);
+      const count = await this._reportService.getReportCount(targetType as string, targetId as string);
 
       res.status(HttpStatus.OK).json({
         success: true,
@@ -91,17 +90,15 @@ export class ReportController implements IReportController {
   async hasReported(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { targetType, targetId } = req.query;
-      const reporterId = (req as any).user?.userId || (req as any).user?.id;
-
-      if (!reporterId) {
-        throw new CustomError(HttpStatus.UNAUTHORIZED, "Unauthorized");
-      }
+      
+      // ✅ FIX: Use getUserIdFromRequest to extract userId from x-user-data header
+      const reporterId = getUserIdFromRequest(req);
 
       if (!targetType || !targetId) {
         throw new CustomError(HttpStatus.BAD_REQUEST, "Target type and target ID are required");
       }
 
-      const hasReported = await this.reportService.hasReported(
+      const hasReported = await this._reportService.hasReported(
         targetType as string,
         targetId as string,
         reporterId

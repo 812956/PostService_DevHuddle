@@ -14,8 +14,8 @@ import { ResolveUsernamesRequest } from "../../grpc/generated/user";
 
 export class MentionService implements IMentionService {
   constructor(
-    private mentionRepository: IMentionRepository,
-    private outboxService: IOutboxService
+    private _mentionRepository: IMentionRepository,
+    private _outboxService: IOutboxService
   ) {}
 
   async processMentions(
@@ -92,13 +92,13 @@ export class MentionService implements IMentionService {
         for (const mentionedUserId of mentionedUserIds) {
           try {
             // Check if mention already exists (prevent duplicates)
-            const existingMentions = await this.mentionRepository.getPostMentions(postId);
+            const existingMentions = await this._mentionRepository.getPostMentions(postId);
             const alreadyMentioned = existingMentions.some(
               (m) => m.mentionedUserId === mentionedUserId
             );
 
             if (!alreadyMentioned) {
-              await this.mentionRepository.createPostMention({
+              await this._mentionRepository.createPostMention({
                 postId,
                 mentionedUserId,
                 actorId,
@@ -107,7 +107,7 @@ export class MentionService implements IMentionService {
               createdMentions.push(mentionedUserId);
 
               // Create outbox event for mention
-              await this.outboxService.createOutboxEvent({
+              await this._outboxService.createOutboxEvent({
                 aggregateType: OutboxAggregateType.MENTION,
                 aggregateId: postId,
                 type: OutboxEventType.POST_MENTION_IN_POST_CREATED,
@@ -142,13 +142,13 @@ export class MentionService implements IMentionService {
         for (const mentionedUserId of mentionedUserIds) {
           try {
             // Check if mention already exists
-            const existingMentions = await this.mentionRepository.getCommentMentions(commentId);
+            const existingMentions = await this._mentionRepository.getCommentMentions(commentId);
             const alreadyMentioned = existingMentions.some(
               (m) => m.mentionedUserId === mentionedUserId
             );
 
             if (!alreadyMentioned) {
-              await this.mentionRepository.createCommentMention({
+              await this._mentionRepository.createCommentMention({
                 commentId,
                 mentionedUserId,
                 actorId,
@@ -157,7 +157,7 @@ export class MentionService implements IMentionService {
               createdMentions.push(mentionedUserId);
 
               // Create outbox event for mention
-              await this.outboxService.createOutboxEvent({
+              await this._outboxService.createOutboxEvent({
                 aggregateType: OutboxAggregateType.MENTION,
                 aggregateId: commentId,
                 type: OutboxEventType.POST_MENTION_IN_COMMENT_CREATED,

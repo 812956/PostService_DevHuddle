@@ -6,6 +6,7 @@ import { BaseRepository } from "./base.repository";
 import { prisma } from "../../config/prisma.config";
 import { Comment, Prisma } from ".prisma/client";
 import logger from "../../utils/logger.util";
+import { v4 as uuidv4 } from "uuid";
 
 export class CommentRepository
   extends BaseRepository<
@@ -28,7 +29,13 @@ export class CommentRepository
     parentCommentId?: string;
   }): Promise<Comment> {
     try {
-      return await super.create(data);
+      // Generate unique ID for the comment
+      const commentId = uuidv4();
+      
+      return await super.create({
+        ...data,
+        id: commentId,
+      });
     } catch (error: any) {
       logger.error("Error creating comment", { error: error.message });
       throw new Error("Failed to create comment");
@@ -68,10 +75,13 @@ export class CommentRepository
 
   async findComment(commentId: string): Promise<Comment | null> {
     try {
-      return await prisma.comment.findUnique({
-        where: { id: commentId },
+      return await prisma.comment.findFirst({
+        where: { 
+          id: commentId,
+          deletedAt: null, // Exclude soft-deleted comments
+        },
         include: {
-          commentMentions: true,
+          CommentMention: true,
         },
       });
     } catch (error: any) {
@@ -80,43 +90,7 @@ export class CommentRepository
     }
   }
 
-  // async getCommentsByPost(
-  //   postId: string,
-  //   options?: CommentSelectOptions
-  // ): Promise<Comment[]> {
-  //   try {
-  //     const defaultOptions: CommentSelectOptions = {
-  //       where: {
-  //         postId,
-  //         parentCommentId: null, // Top-level comments only
-  //         deletedAt: null,
-  //       },
-  //       orderBy: {
-  //         createdAt: "desc",
-  //       },
-  //       take: options?.take || 20,
-  //       include: {
-  //         commentMentions: true,
-  //         Replies: {
-  //           where: {
-  //             deletedAt: null,
-  //           },
-  //           take: 5,
-  //           orderBy: {
-  //             createdAt: "asc",
-  //           },
-  //         },
-  //       },
-  //     };
 
-  //     const mergedOptions = { ...defaultOptions, ...options };
-
-  //     return await prisma.comment.findMany(mergedOptions);
-  //   } catch (error: any) {
-  //     logger.error("Error getting comments by post", { error: error.message });
-  //     throw new Error("Failed to get comments by post");
-  //   }
-  // }
   async getCommentsByPost(
     postId: string,
     limit: number,
@@ -129,17 +103,23 @@ export class CommentRepository
       const include: any = {};
 
       if (includeMentions) {
-        include.commentMentions = true;
+        include.CommentMention = true;
       }
 
       if (includeReplies) {
-        include.Replies = {
+        include.other_Comment = {
           where: {
             deletedAt: null,
+            // LinkedIn-style: Only get direct replies to this main comment
+            // No nested replies - all replies are flat under main comment
           },
-          take: 5,
+          take: 10, // Can show more replies
           orderBy: {
             createdAt: "asc",
+          },
+          include: {
+            CommentMention: includeMentions,
+            // NO nested other_Comment include - replies don't have replies in LinkedIn-style
           },
         };
       }
@@ -179,12 +159,26 @@ export class CommentRepository
         orderBy: { createdAt: "asc" },
         take: limit,
         include: {
-          commentMentions: true,
+          CommentMention: true,
         },
       });
     } catch (error: any) {
       logger.error("Error getting replies", { error: error.message });
       throw new Error("Failed to get replies");
+    }
+  }
+
+  async getReplyCount(commentId: string): Promise<number> {
+    try {
+      return await prisma.comment.count({
+        where: {
+          parentCommentId: commentId,
+          deletedAt: null,
+        },
+      });
+    } catch (error: any) {
+      logger.error("Error getting reply count", { error: error.message, commentId });
+      throw new Error("Failed to get reply count");
     }
   }
 

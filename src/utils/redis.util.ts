@@ -356,4 +356,34 @@ export class RedisCacheService {
       logger.error("Error invalidating post caches", { error, postId });
     }
   }
+
+  // ✅ NEW: Generic cache methods for feed caching
+  static async get(key: string): Promise<string | null> {
+    try {
+      return await redisClient.get(key);
+    } catch (error) {
+      logger.error("Error getting from Redis cache", { error, key });
+      return null;
+    }
+  }
+
+  static async set(key: string, value: string, ttl?: number): Promise<void> {
+    try {
+      if (ttl) {
+        await redisClient.setEx(key, ttl, value);
+      } else {
+        await redisClient.set(key, value);
+      }
+    } catch (error) {
+      logger.error("Error setting Redis cache", { error, key });
+    }
+  }
+
+  static async delete(key: string): Promise<void> {
+    try {
+      await redisClient.del(key);
+    } catch (error) {
+      logger.error("Error deleting from Redis cache", { error, key });
+    }
+  }
 }

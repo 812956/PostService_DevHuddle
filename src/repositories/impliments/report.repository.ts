@@ -7,8 +7,10 @@ import {
   ReportTargetType,
   ReportStatus,
   ReportReason,
+  ReportSeverity,
 } from ".prisma/client";
 import logger from "../../utils/logger.util";
+import { v4 as uuidv4 } from "uuid";
 
 export class ReportRepository
   extends BaseRepository<
@@ -26,15 +28,41 @@ export class ReportRepository
 
   async createReport(data: {
     reporterId: string;
-    targetType: ReportTargetType;
+    targetType: string;
     targetId: string;
     postId?: string;
     commentId?: string;
-    reason: ReportReason;
+    reason: string;
+    severity?: string;
+    description?: string;
+    status?: string;
     metadata?: any;
   }): Promise<Report> {
     try {
-      return await super.create(data);
+      // Generate unique ID for the report
+      const reportId = uuidv4();
+      
+      const createData: any = {
+        id: reportId,
+        reporterId: data.reporterId,
+        targetType: data.targetType as ReportTargetType,
+        targetId: data.targetId,
+        reason: data.reason as ReportReason,
+        severity: (data.severity as ReportSeverity) || ReportSeverity.LOW,
+        description: data.description,
+        status: (data.status as ReportStatus) || ReportStatus.PENDING,
+        metadata: data.metadata,
+      };
+
+      // Use relation syntax for optional foreign keys
+      if (data.postId) {
+        createData.posts = { connect: { id: data.postId } };
+      }
+      if (data.commentId) {
+        createData.Comment = { connect: { id: data.commentId } };
+      }
+
+      return await super.create(createData);
     } catch (error: any) {
       logger.error("Error creating report", { error: error.message });
       throw new Error("Failed to create report");
@@ -90,11 +118,30 @@ export class ReportRepository
 
   async updateReportStatus(
     reportId: string,
-    status: ReportStatus,
-    resolvedAt: Date = new Date()
+    status: ReportStatus | string,
+    resolvedAt?: Date,
+    reviewedById?: string,
+    resolution?: string
   ): Promise<Report> {
     try {
-      return await super.update(reportId, { status, resolvedAt });
+      const updateData: any = {
+        status: status as ReportStatus,
+      };
+      
+      if (resolvedAt) {
+        updateData.resolvedAt = resolvedAt;
+      }
+      
+      if (reviewedById) {
+        updateData.reviewedById = reviewedById;
+        updateData.reviewedAt = new Date();
+      }
+      
+      if (resolution) {
+        updateData.resolution = resolution;
+      }
+      
+      return await super.update(reportId, updateData);
     } catch (error: any) {
       logger.error("Error updating report status", { error: error.message });
       throw new Error("Failed to update report status");

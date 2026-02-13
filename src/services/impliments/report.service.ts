@@ -12,30 +12,47 @@ import {
   OutboxEventType,
   ReportTargetType,
   ReportReason,
+  ReportSeverity,
+  ReportStatus,
 } from "@prisma/client";
+import redisClient from "../../config/redis.config";
 
 export class ReportService implements IReportService {
   constructor(
-    private reportRepository: IReportRepository,
-    private postRepository: IPostRepository,
-    private commentRepository: ICommentRepository,
-    private outboxService: IOutboxService
+    private _reportRepository: IReportRepository,
+    private _postRepository: IPostRepository,
+    private _commentRepository: ICommentRepository,
+    private _outboxService: IOutboxService
   ) {}
 
   async reportPost(
     postId: string,
     reporterId: string,
     reason: string,
-    metadata?: any
+    metadata?: any,
+    description?: string
   ): Promise<any> {
     try {
-      // Validate post exists
-      const post = await this.postRepository.findPost(postId);
+      // 1. Rate limiting: Check if user has exceeded daily limit (5 reports per day)
+      const rateLimitKey = `report:user:${reporterId}:count`;
+      const reportCount = await redisClient.incr(rateLimitKey);
+      if (reportCount === 1) {
+        await redisClient.expire(rateLimitKey, 86400); // 24 hours
+      }
+      if (reportCount > 5) {
+        throw new CustomError(
+          grpc.status.RESOURCE_EXHAUSTED,
+          "Daily report limit exceeded. Maximum 5 reports per day."
+        );
+      }
+
+      // 2. Validate post exists
+      const post = await this._postRepository.findPost(postId);
       if (!post) {
         throw new CustomError(grpc.status.NOT_FOUND, "Post not found");
       }
 
-      // Validate reason
+      // 3. Validate reason
       if (!Object.values(ReportReason).includes(reason as ReportReason)) {
         throw new CustomError(
           grpc.status.INVALID_ARGUMENT,
@@ -43,8 +60,8 @@ export class ReportService implements IReportService {
         );
       }
 
-      // Check if already reported
-      const existingReport = await this.reportRepository.findReport(
+      // 4. Check if already reported (idempotency)
+      const existingReport = await this._reportRepository.findReport(
         reporterId,
         ReportTargetType.POST,
         postId
@@ -56,21 +73,44 @@ export class ReportService implements IReportService {
         );
       }
 
-      // Create report
-      const report = await this.reportRepository.createReport({
+      // 5. Get current report count to determine severity
+      const currentReportCount = await this._reportRepository.getReportCount(
+        ReportTargetType.POST,
+        postId
+      );
+
+      // 6. Calculate severity based on report count and reason
+      const severity = this.calculateSeverity(reason as ReportReason, currentReportCount);
+
+      // 7. Create report with severity
+      const report = await this._reportRepository.createReport({
         reporterId,
         targetType: ReportTargetType.POST,
         targetId: postId,
         postId,
         reason: reason as ReportReason,
+        severity,
+        description,
         metadata: metadata || {},
+        status: ReportStatus.PENDING,
       });
 
-      // Update post reports counter
-      await this.postRepository.incrementReportsCount(postId);
+      // 8. Update post reports counter
+      await this._postRepository.incrementReportsCount(postId);
 
-      // Create outbox event
-      await this.outboxService.createOutboxEvent({
+      // 9. Check escalation rules (auto-hide if too many reports)
+      const newReportCount = currentReportCount + 1;
+      if (newReportCount >= 10) {
+        // Auto-hide post if 10+ reports
+        await this._postRepository.updatePost(postId, {
+          isHidden: true,
+          hiddenAt: new Date(),
+          hiddenReason: "Multiple reports received",
+        });
+      }
+
+      // 10. Create outbox event
+      await this._outboxService.createOutboxEvent({
         aggregateType: OutboxAggregateType.REPORT,
         aggregateId: report.id,
         type: OutboxEventType.POST_REPORT_CREATED,
@@ -82,6 +122,9 @@ export class ReportService implements IReportService {
           reporterId,
           postAuthorId: post.userId,
           reason,
+          severity,
+          reportCount: newReportCount,
+          description,
           metadata,
         },
       });
@@ -89,6 +132,8 @@ export class ReportService implements IReportService {
       logger.info(`Post ${postId} reported by user ${reporterId}`, {
         reportId: report.id,
         reason,
+        severity,
+        reportCount: newReportCount,
       });
 
       return report;
@@ -104,6 +149,37 @@ export class ReportService implements IReportService {
         : new CustomError(grpc.status.INTERNAL, "Failed to report post");
     }
   }
+
+  private calculateSeverity(
+    reason: ReportReason,
+    currentReportCount: number
+  ): ReportSeverity {
+    // Critical reasons
+    if (
+      reason === ReportReason.VIOLENCE ||
+      reason === ReportReason.SELF_HARM ||
+      reason === ReportReason.HATE_SPEECH
+    ) {
+      return ReportSeverity.CRITICAL;
+    }
+
+    // High severity reasons
+    if (reason === ReportReason.HARASSMENT) {
+      return ReportSeverity.HIGH;
+    }
+
+    // Medium severity with multiple reports
+    if (currentReportCount >= 5) {
+      return ReportSeverity.HIGH;
+    }
+
+    if (currentReportCount >= 3) {
+      return ReportSeverity.MEDIUM;
+    }
+
+    // Default to low
+    return ReportSeverity.LOW;
+  }
   
   async reportComment(
     commentId: string,
@@ -113,7 +189,7 @@ export class ReportService implements IReportService {
   ): Promise<any> {
     try {
       // Validate comment exists
-      const comment = await this.commentRepository.findComment(commentId);
+      const comment = await this._commentRepository.findComment(commentId);
       if (!comment) {
         throw new CustomError(grpc.status.NOT_FOUND, "Comment not found");
       }
@@ -127,7 +203,7 @@ export class ReportService implements IReportService {
       }
 
       // Check if already reported
-      const existingReport = await this.reportRepository.findReport(
+      const existingReport = await this._reportRepository.findReport(
         reporterId,
         ReportTargetType.COMMENT,
         commentId
@@ -140,7 +216,7 @@ export class ReportService implements IReportService {
       }
 
       // Create report
-      const report = await this.reportRepository.createReport({
+      const report = await this._reportRepository.createReport({
         reporterId,
         targetType: ReportTargetType.COMMENT,
         targetId: commentId,
@@ -151,7 +227,7 @@ export class ReportService implements IReportService {
       });
 
       // Create outbox event
-      await this.outboxService.createOutboxEvent({
+      await this._outboxService.createOutboxEvent({
         aggregateType: OutboxAggregateType.REPORT,
         aggregateId: report.id,
         type: OutboxEventType.POST_REPORT_CREATED, 
@@ -192,7 +268,7 @@ export class ReportService implements IReportService {
     targetId: string
   ): Promise<number> {
     try {
-      return await this.reportRepository.getReportCount(
+      return await this._reportRepository.getReportCount(
         targetType as ReportTargetType,
         targetId
       );
@@ -215,7 +291,7 @@ export class ReportService implements IReportService {
     reporterId: string
   ): Promise<boolean> {
     try {
-      const report = await this.reportRepository.findReport(
+      const report = await this._reportRepository.findReport(
         reporterId,
         targetType as ReportTargetType,
         targetId
