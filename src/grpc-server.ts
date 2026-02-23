@@ -32,7 +32,7 @@ import {
 } from "./grpc/generated/post";
 import { PostController } from "./controllers/impliments/feed.controller";
 import { CustomError } from "./utils/error.util";
-import { PostSerive } from "./services/impliments/post.service";
+import { PostService } from "./services/impliments/post.service";
 import { PostRepository } from "./repositories/impliments/post.repository";
 import { LikeRepository } from "./repositories/impliments/like.repository";
 import { CommentRepository } from "./repositories/impliments/comment.repository";
@@ -71,7 +71,7 @@ const feedService = new FeedService(
   postRepository
 );
 
-const postService = new PostSerive(
+const postService = new PostService(
   postRepository,
   likeRepository,
   commentRepository,

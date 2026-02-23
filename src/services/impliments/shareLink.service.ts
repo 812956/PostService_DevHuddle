@@ -3,8 +3,10 @@ import { IShareLinkRepository } from "../../repositories/interface/IShareLinkRep
 import { IPostRepository } from "../../repositories/interface/IPostRepository";
 import { CustomError } from "../../utils/error.util";
 import * as grpc from "@grpc/grpc-js";
+import { HttpStatus } from "../../constands/http.status";
 import logger from "../../utils/logger.util";
 import crypto from "crypto";
+import { Visibility } from "@prisma/client";
 
 // Helper function to generate short IDs (CommonJS compatible)
 function generateShortId(length: number = 8): string {
@@ -45,11 +47,11 @@ export class ShareLinkService implements IShareLinkService {
       // 1. Check post exists
       const post = await this._postRepository.findPost(postId);
       if (!post) {
-        throw new CustomError(grpc.status.NOT_FOUND, "Post not found");
+        throw new CustomError(HttpStatus.NOT_FOUND, "Post not found");
       }
 
       // 2. Check privacy - can user share this?
-      if (post.visibility === "VISIBILITY_CONNECTIONS" && post.userId !== userId) {
+      if (post.visibility === Visibility.CONNECTIONS && post.userId !== userId) {
         // In a real system, check if users are connected
         // For now, allow if not the owner
       }
@@ -74,7 +76,7 @@ export class ShareLinkService implements IShareLinkService {
       }
 
       // 5. Generate share token for private posts
-      if (post.visibility === "VISIBILITY_CONNECTIONS" && options.isPrivate) {
+      if (post.visibility === Visibility.CONNECTIONS && options.isPrivate) {
         shareToken = generateSecureToken(32);
         expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
 
@@ -116,12 +118,12 @@ export class ShareLinkService implements IShareLinkService {
         (await this._shareLinkRepository.findByShortId(tokenOrShortId));
 
       if (!link) {
-        throw new CustomError(grpc.status.NOT_FOUND, "Invalid link");
+        throw new CustomError(HttpStatus.NOT_FOUND, "Invalid link");
       }
 
       // Check token expiration
       if (link.tokenExpiresAt && link.tokenExpiresAt < new Date()) {
-        throw new CustomError(grpc.status.NOT_FOUND, "Link expired");
+        throw new CustomError(HttpStatus.NOT_FOUND, "Link expired");
       }
 
       // Increment click count (async, don't wait)
@@ -153,7 +155,7 @@ export class ShareLinkService implements IShareLinkService {
       attempts++;
     }
     throw new CustomError(
-      grpc.status.INTERNAL,
+      HttpStatus.INTERNAL_SERVER_ERROR,
       "Failed to generate unique short ID"
     );
   }

@@ -1,0 +1,31 @@
+syntax = "proto3";
+
+package admin;
+
+message SubmitReportRequest {
+  string reporterId = 1;
+  string targetId = 2;
+  string targetType = 3; // e.g., "USER", "POST", "COMMENT", "CHAT", "PROJECT"
+  string reason = 4;
+  string description = 5;
+  string metadata = 6; // JSON string
+}
+
+message SubmitReportResponse {
+  bool success = 1;
+  string reportId = 2;
+  string message = 3;
+}
+
+message GetUserStatusRequest {
+  string userId = 1;
+}
+
+message GetUserStatusResponse {
+  bool isBlocked = 1;
+}
+
+service AdminService {
+  rpc SubmitReport (SubmitReportRequest) returns (SubmitReportResponse);
+  rpc GetUserStatus (GetUserStatusRequest) returns (GetUserStatusResponse);
+}

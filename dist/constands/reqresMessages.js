@@ -56,5 +56,17 @@ exports.Messages = {
     REGISTRATION_FAILD: "Registration failed",
     OTP_VERIFICATION_FAILD: "OTP verification failed",
     EMAIL_PASSWORD_REQUIRED: 'Email and password are required',
-    POST_CREATION_FAILD: "Post creation faild"
+    POST_CREATION_FAILD: "Post creation faild",
+    POST_ID_REQUIRED: "Post ID is required",
+    COMMENT_ID_REQUIRED: "Comment ID is required",
+    POST_LIKED_SUCCESS: "Post liked successfully",
+    POST_UNLIKED_SUCCESS: "Post unliked successfully",
+    COMMENT_LIKED_SUCCESS: "Comment liked successfully",
+    COMMENT_UNLIKED_SUCCESS: "Comment unliked successfully",
+    COMMENT_CONTENT_REQUIRED: "Comment content is required",
+    COMMENT_CREATED_SUCCESS: "Comment created successfully",
+    COMMENT_UPDATED_SUCCESS: "Comment updated successfully",
+    COMMENT_DELETED_SUCCESS: "Comment deleted successfully",
+    SHARE_TYPE_MUST_BE_RESHARE_QUOTE: "Share type must be RESHARE or QUOTE",
+    POST_NOT_FOUNT: "Post not found",
 };

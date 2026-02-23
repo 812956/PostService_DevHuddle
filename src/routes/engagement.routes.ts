@@ -51,6 +51,11 @@ export const setupEngagementRoutes = (
   );
 
   router.get(
+    "/posts/:postId/likes",
+    likeController.getPostLikes.bind(likeController)
+  );
+
+  router.get(
     "/posts/:postId/likes/status",
     // rateLimiters.moderate,
     likeController.isPostLiked.bind(likeController)
@@ -88,7 +93,6 @@ export const setupEngagementRoutes = (
     "/posts/:postId/comments",
     // rateLimiters.strict,
     idempotencyMiddleware(idempotencyRepository),
-    idempotencyMiddleware(idempotencyRepository),
     validateDto(CreateCommentDto),
     commentController.createComment.bind(commentController)
   );
@@ -96,7 +100,6 @@ export const setupEngagementRoutes = (
   router.patch(
     "/comments/:commentId",
     // rateLimiters.strict,
-    idempotencyMiddleware(idempotencyRepository),
     idempotencyMiddleware(idempotencyRepository),
     validateDto(UpdateCommentDto),
     commentController.updateComment.bind(commentController)
@@ -144,7 +147,6 @@ export const setupEngagementRoutes = (
     "/posts/:postId/send",
     // rateLimiters.strict,
     idempotencyMiddleware(idempotencyRepository),
-    idempotencyMiddleware(idempotencyRepository),
     validateDto(SendPostDto),
     sendController.sendPost.bind(sendController)
   );
@@ -154,7 +156,6 @@ export const setupEngagementRoutes = (
     "/posts/:postId/report",
     // rateLimiters.strict,
     idempotencyMiddleware(idempotencyRepository),
-    idempotencyMiddleware(idempotencyRepository),
     validateDto(ReportPostDto),
     reportController.reportPost.bind(reportController)
   );
@@ -162,7 +163,6 @@ export const setupEngagementRoutes = (
   router.post(
     "/comments/:commentId/report",
     // rateLimiters.strict,
-    idempotencyMiddleware(idempotencyRepository),
     idempotencyMiddleware(idempotencyRepository),
     validateDto(ReportCommentDto),
     reportController.reportComment.bind(reportController)

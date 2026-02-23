@@ -1,6 +1,6 @@
 import { BaseRepository } from "./base.repository";
 import { prisma } from "../../config/prisma.config";
-import { CommentMention, PostMention, Prisma } from ".prisma/client";
+import { CommentMention, PostMention, Prisma } from "@prisma/client";
 import { IMentionRepository } from "../interface/IMentionRepository";
 import logger from "../../utils/logger.util";
 

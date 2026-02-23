@@ -46,8 +46,15 @@ export const KAFKA_TOPICS = {
     // Mention events
     USER_MENTIONED: "user.mentioned.v1",
     USER_MENTIONED_DLQ: "user.mentioned.v1-dlq",
-
+  
     // Post Deletion events
     POST_DELETED: "post.deleted.v1",
     POST_DELETED_DLQ: "post.deleted.v1-dlq",
+  
+    // Moderation events (Phase 2 Consolidation)
+    ADMIN_ACTION_ENFORCED: "admin-action-enforced",
+    USER_STATE_TOGGLED: "user-state-toggled",
+
+    // User account events
+    USER_DELETED: "user-events",
   } as const;

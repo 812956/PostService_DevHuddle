@@ -31,7 +31,7 @@ export interface UserForFeedListing {
   username: string;
 }
 
-import { posts, Media } from ".prisma/client";
+import { posts, Media } from "@prisma/client";
 
 // Post with user enrichment
 export type EnrichedPost = posts & {

@@ -4,7 +4,7 @@ import {
 } from "../interface/ICommentRepository";
 import { BaseRepository } from "./base.repository";
 import { prisma } from "../../config/prisma.config";
-import { Comment, Prisma } from ".prisma/client";
+import { Comment, Prisma } from "@prisma/client";
 import logger from "../../utils/logger.util";
 import { v4 as uuidv4 } from "uuid";
 
@@ -42,16 +42,14 @@ export class CommentRepository
     }
   }
 
-  async updateComment(commentId: string, content: string): Promise<Comment> {
+  async updateComment(
+    commentId: string,
+    data: Partial<Prisma.CommentUpdateInput>
+  ): Promise<Comment> {
     try {
-      const comment = await super.findById(commentId);
-      if (!comment) {
-        throw new Error("Comment not found");
-      }
-
       return await prisma.comment.update({
         where: { id: commentId },
-        data: { content, editedAt: new Date(), version: comment.version + 1 },
+        data,
       });
     } catch (error: any) {
       logger.error("Error updating comment", { error: error.message });
@@ -220,4 +218,50 @@ export class CommentRepository
     }
   }
 
+  async hideAllCommentsByUser(userId: string, reason: string): Promise<void> {
+    try {
+      await prisma.comment.updateMany({
+        where: { userId, deletedAt: null },
+        data: { isHidden: true, hiddenAt: new Date(), hiddenReason: reason },
+      });
+    } catch (error: any) {
+      logger.error("Error hiding all comments by user", { error: error.message, userId });
+      throw new Error("Database error");
+    }
+  }
+
+  async unhideAllCommentsByUser(userId: string): Promise<void> {
+    try {
+      await prisma.comment.updateMany({
+        where: { userId, deletedAt: null },
+        data: { isHidden: false, hiddenAt: null, hiddenReason: null },
+      });
+    } catch (error: any) {
+      logger.error("Error unhiding all comments by user", { error: error.message, userId });
+      throw new Error("Database error");
+    }
+  }
+
+  async hideComment(commentId: string, reason: string): Promise<void> {
+    try {
+      await prisma.comment.update({
+        where: { id: commentId },
+        data: { isHidden: true, hiddenAt: new Date(), hiddenReason: reason },
+      });
+    } catch (error: any) {
+      logger.error("Error hiding comment", { error: error.message, commentId });
+      throw new Error("Database error");
+    }
+  }
+
+  async deleteAllCommentsByUser(userId: string): Promise<void> {
+    try {
+      await prisma.comment.deleteMany({
+        where: { userId },
+      });
+    } catch (error: any) {
+      logger.error("Error deleting all comments by user", { error: error.message, userId });
+      throw new Error("Database error");
+    }
+  }
 }

@@ -15,7 +15,20 @@ export const idempotencyMiddleware = (
     }
 
     const idempotencyKey = req.headers["Idempotency-Key"] as string;
-    const userId = JSON.parse(req.headers["x-user-data"] as string).id;
+    
+    let userId: string | undefined;
+    const userDataHeader = req.headers["x-user-data"] as string;
+
+    if (userDataHeader) {
+      try {
+        const userData = JSON.parse(userDataHeader);
+        userId = userData.id;
+      } catch (err) {
+        logger.error("Failed to parse x-user-data header in idempotency middleware", {
+          header: userDataHeader,
+        });
+      }
+    }
 
     if (!idempotencyKey) {
       return next(); // Optional - can skip if no key provided

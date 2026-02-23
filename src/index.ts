@@ -117,9 +117,9 @@ const engagementRouter = setupEngagementRoutes(
   idempotencyRepository
 );
 
-app.use("/api/v1", engagementRouter);
-app.use("/api/v1/admin", adminRouter);
-app.use("/api/v1/posts", feedRouter);
+app.use("/", engagementRouter);
+app.use("/admin", adminRouter);
+app.use("/posts", feedRouter);
 
 app.get("/health", (req: Request, res: Response) => {
   res.status(200).json({ status: "Post service is running" });

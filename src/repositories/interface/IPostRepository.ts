@@ -1,4 +1,4 @@
-import { posts, Prisma, Media } from ".prisma/client";
+import { posts, Prisma, Media } from "@prisma/client";
 import {
   SubmitPostRequest,
   SubmitPostResponse,
@@ -7,10 +7,9 @@ import {
 export interface PostSelectOptions {
   include: any;
   take: number;
-  orderBy: {
-    id?: "asc" | "desc";
-    createdAt?: "asc" | "desc";
-  };
+  orderBy: 
+    | { [key: string]: "asc" | "desc" } 
+    | { [key: string]: "asc" | "desc" }[];
   skip?: number;
   where?: any;
   // Removed cursor - using skip-based pagination for simplicity
@@ -25,6 +24,7 @@ export interface IPostRepository {
   getPostsRepo(postSelectOptions: PostSelectOptions): Promise<EnrichedPost[]>;
   submitPostRepo(data: SubmitPostRequest): Promise<SubmitPostResponse>;
   findPost(postId: string): Promise<posts | null>;
+  findPostWithMedia(postId: string): Promise<any>;
   deletePost(postId: string): Promise<any>;
   // Counter update methods
   incrementLikesCount(postId: string): Promise<void>;
@@ -36,7 +36,6 @@ export interface IPostRepository {
   updatePost(postId: string, data: Partial<Prisma.postsUpdateInput>): Promise<posts>;
   lockForEditing(postId: string): Promise<void>;
   unlockEditing(postId: string): Promise<void>;
-  // ✅ NEW: Get posts by IDs (for feed retrieval)
   getPostsByIds(postIds: string[]): Promise<posts[]>;
   // For Edit Post Transaction
   updatePostWithVersions(params: {
@@ -51,4 +50,7 @@ export interface IPostRepository {
   getMediaIds(postId: string): Promise<string[]>;
   findMediaByIds(mediaIds: string[]): Promise<Media[]>;
   countPostsAfter(date: Date): Promise<number>;
+  hideAllPostsByUser(userId: string, reason: string): Promise<void>;
+  unhideAllPostsByUser(userId: string): Promise<void>;
+  hidePost(postId: string, reason: string): Promise<void>;
 }

@@ -96,6 +96,25 @@ export async function getProducer(): Promise<Producer> {
   return producer;
 }
 
+const consumers: Map<string, any> = new Map();
+
+export async function getConsumer(groupId: string): Promise<any> {
+  let consumer = consumers.get(groupId);
+  if (!consumer) {
+    const kafka = new Kafka(KAFKA_CONFIG);
+    consumer = kafka.consumer({
+      groupId,
+      sessionTimeout: 30000,
+      heartbeatInterval: 3000,
+      maxWaitTimeInMs: 5000,
+    });
+    await consumer.connect();
+    consumers.set(groupId, consumer);
+    logger.info(`Kafka consumer connected with group: ${groupId}`);
+  }
+  return consumer;
+}
+
 /**
  * Publish event to Kafka with retry logic
  */

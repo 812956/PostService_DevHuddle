@@ -3,6 +3,7 @@ import express, { Express } from "express";
 import { grpcServer } from "../grpc-server";
 import { connectRedis } from "../config/redis.config";
 import { disconnectAdmin, disconnectProducer, initializeKafkaTopics } from "./kafka.util";
+import { startAdminConsumer } from "../consumers/admin.consumer";
 
 export const app: Express = express();
 
@@ -15,6 +16,9 @@ export const startServer = async () => {
 
     await initializeKafkaTopics();
     logger.info("Kafka topics initialized");
+
+    await startAdminConsumer();
+    logger.info("Admin consumer started");
 
     const PORT = process.env.PORT || 3002;
     app.listen(PORT, () => {

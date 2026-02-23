@@ -1,4 +1,4 @@
-import { posts, Comment, Prisma } from '@prisma/client';
+import { posts, Comment, Prisma, Visibility as PrismaVisibility, CommentControl as PrismaCommentControl } from '@prisma/client';
 import { PostResponseDto, CommentResponseDto } from '../dtos/response/post.dto';
 import { CreatePostDto } from '../dtos/request/create-post.dto';
 
@@ -33,8 +33,8 @@ export class PostMapper {
     return {
       userId,
       content: dto.content,
-      visibility: dto.visibility || 'PUBLIC',
-      commentControl: dto.commentControl || 'ANYONE',
+      visibility: (dto.visibility as unknown as PrismaVisibility) || PrismaVisibility.PUBLIC,
+      commentControl: (dto.commentControl as unknown as PrismaCommentControl) || PrismaCommentControl.ANYONE,
       tags: []
       // Note: posts schema doesn't have type, imageMedia, videoMedia fields
       // Media is handled via Media relation
@@ -46,6 +46,33 @@ export class PostMapper {
    */
   static toResponseDtoList(entities: posts[]): PostResponseDto[] {
     return entities.map(entity => this.toResponseDto(entity));
+  }
+
+  /**
+   * Map Prisma posts entity to gRPC Post message
+   */
+  static toGrpcPost(entity: any): any {
+    return {
+      id: entity.id,
+      content: entity.content || '',
+      userId: entity.userId,
+      createdAt: entity.createdAt.toISOString(),
+      user: entity.user || { id: entity.userId, username: 'Unknown', name: 'Unknown', avatar: '' },
+      attachments: (entity.Media || []).map((m: any) => ({
+        id: m.id,
+        post_id: m.postId || entity.id,
+        type: String(m.type || 'IMAGE'),
+        url: m.url,
+        created_at: m.createdAt ? new Date(m.createdAt).toISOString() : new Date().toISOString(),
+      })),
+      engagement: {
+        likesCount: entity.likesCount || 0,
+        commentsCount: entity.commentsCount || 0,
+        sharesCount: entity.sharesCount || 0,
+        isLiked: false,
+        isShared: false,
+      }
+    };
   }
 }
 

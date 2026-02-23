@@ -56,7 +56,7 @@ class BaseRepository {
     }
     async delete(id) {
         try {
-            await this.model.delete({ where: { id } });
+            return await this.model.delete({ where: { id } });
         }
         catch (error) {
             logger_util_1.default.error(`Error deleting entity: ${id}`, {

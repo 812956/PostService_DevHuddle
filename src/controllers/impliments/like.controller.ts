@@ -118,6 +118,30 @@ export class LikeController {
     }
   }
 
+  async getPostLikes(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { postId } = req.params;
+      const { page = 1, limit = 10 } = req.query;
+
+      if (!postId) {
+        throw new CustomError(HttpStatus.BAD_REQUEST, Messages.POST_ID_REQUIRED);
+      }
+
+      const likesData = await this._likeService.getPostLikesUsers(
+        postId as string,
+        Number(limit),
+        Number(page)
+      );
+
+      res.status(HttpStatus.OK).json({
+        success: true,
+        data: likesData,
+      });
+    } catch (error: any) {
+      next(error);
+    }
+  }
+
   async getCommentLikeCount(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { commentId } = req.params;

@@ -1,6 +1,32 @@
 import * as grpc from "@grpc/grpc-js";
 import { CustomError } from "./error.util";
 import logger from "./logger.util";
+import { HttpStatus } from "../constands/http.status";
+
+/**
+ * Maps HTTP status codes to gRPC status codes.
+ */
+const mapHttpToGrpcStatus = (httpStatus: number): grpc.status => {
+  switch (httpStatus) {
+    case HttpStatus.BAD_REQUEST:
+      return grpc.status.INVALID_ARGUMENT;
+    case HttpStatus.UNAUTHORIZED:
+      return grpc.status.UNAUTHENTICATED;
+    case HttpStatus.FORBIDDEN:
+      return grpc.status.PERMISSION_DENIED;
+    case HttpStatus.NOT_FOUND:
+      return grpc.status.NOT_FOUND;
+    case HttpStatus.CONFLICT:
+      return grpc.status.ALREADY_EXISTS;
+    case HttpStatus.INTERNAL_SERVER_ERROR:
+      return grpc.status.INTERNAL;
+    default:
+      // If it's already a small number, it might be a gRPC code already
+      // However, we should be careful. 
+      if (httpStatus < 20) return httpStatus as grpc.status;
+      return grpc.status.INTERNAL;
+  }
+};
 
 /**
  * A higher-order function to wrap gRPC service methods.
@@ -24,9 +50,14 @@ export const grpcHandler =
         error: err.message,
         request: call.request,
       });
+
+      const code = err instanceof CustomError 
+        ? mapHttpToGrpcStatus(err.status) 
+        : grpc.status.INTERNAL;
+
       callback(
         {
-          code: err instanceof CustomError ? err.status : grpc.status.INTERNAL,
+          code,
           message: err.message || "Internal server error",
         },
         null

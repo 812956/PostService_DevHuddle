@@ -3,7 +3,7 @@ import { PostController } from "../controllers/impliments/feed.controller";
 import { validateDto } from "../middleware/validation.middleware";
 import { CreatePostDto } from "../dto/post.dto";
 import { MediaController } from "../controllers/impliments/media.controller";
-import { PostSerive } from "../services/impliments/post.service";
+import { PostService } from "../services/impliments/post.service";
 import { MediaService } from "../services/impliments/media.service";
 import { PostRepository } from "../repositories/impliments/post.repository";
 import { LikeRepository } from "../repositories/impliments/like.repository";
@@ -33,7 +33,7 @@ const feedRepository = new FeedRepository();
 const outboxService = new OutboxService(outboxRepository);
 const feedRankingService = new FeedRankingService(postRepository);
 const feedService = new FeedService(feedRepository, feedRankingService, postRepository);
-const postService = new PostSerive(
+const postService = new PostService(
   postRepository,
   likeRepository,
   commentRepository,
@@ -66,6 +66,8 @@ router
 
   // Delete post by path parameter
   // CRITICAL: This must be defined AFTER specific paths like /delete and /medias/unused
+  .patch("/:postId", postController.editPostHttp.bind(postController))
+  .get("/:postId", postController.getPostByIdHttp.bind(postController))
   .delete("/:postId", postController.deletePostHttp.bind(postController));
 
 export default router;

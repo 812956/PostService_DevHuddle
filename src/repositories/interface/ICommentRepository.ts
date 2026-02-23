@@ -22,7 +22,7 @@ export interface ICommentRepository {
     content: string;
     parentCommentId?: string;
   }): Promise<Comment>;
-  updateComment(commentId: string, content: string): Promise<Comment>;
+  updateComment(commentId: string, data: Partial<Prisma.CommentUpdateInput>): Promise<Comment>;
   deleteComment(commentId: string): Promise<void>;
   findComment(commentId: string): Promise<Comment | null>;
   // getCommentsByPost(postId: string, options?: CommentSelectOptions): Promise<Comment[]>;
@@ -38,4 +38,7 @@ export interface ICommentRepository {
   getReplyCount(commentId: string): Promise<number>;
   incrementLikesCount(commentId: string): Promise<void>;
   decrementLikesCount(commentId: string): Promise<void>;
+  hideAllCommentsByUser(userId: string, reason: string): Promise<void>;
+  unhideAllCommentsByUser(userId: string): Promise<void>;
+  hideComment(commentId: string, reason: string): Promise<void>;
 }

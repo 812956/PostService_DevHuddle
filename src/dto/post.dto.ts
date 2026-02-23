@@ -8,13 +8,13 @@ export interface ReportMetadata {
 
 export enum Visibility {
   PUBLIC = 'PUBLIC',
-  VISIBILITY_CONNECTIONS = 'VISIBILITY_CONNECTIONS',
+  CONNECTIONS = 'CONNECTIONS',
 }
 
 export enum CommentControl {
   ANYONE = 'ANYONE',
   CONNECTIONS = 'CONNECTIONS',
-  NONE = 'NONE',
+  NOBODY = 'NOBODY',
 }
 
 export enum ReportReason {

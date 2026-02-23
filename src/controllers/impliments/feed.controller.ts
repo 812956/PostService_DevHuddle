@@ -23,19 +23,6 @@ import { getUserIdFromRequest } from "../../utils/request.util";
 export class PostController implements IfeedController {
   constructor(private _postService: IpostService) {}
 
-  // async feedPosting(req: CreatePostRequest): Promise<CreatePostResponse> {
-  //   try {
-  //     const post = await this._postService.createPost(req);
-  //     return {
-  //       message: "Post created",
-  //       postId: post.postId,
-  //     };
-  //   } catch (err: any) {
-  //     logger.error("CreatePost error", { error: err.message });
-  //     throw new CustomError(HttpStatus.INTERNAL_SERVER_ERROR, err.message);
-  //   }
-  // }
-
   async submitPostController(
     req: SubmitPostRequest
   ): Promise<SubmitPostResponse> {
@@ -50,10 +37,13 @@ export class PostController implements IfeedController {
 
   async getPostsController(req: ListPostsRequest): Promise<ListPostsResponse> {
     try {
-      const { pageParam, userId } = req;
+      const { pageParam, userId, limit } = req;
       const result: ListPostsResponse = await this._postService.getPosts(
         pageParam as string | undefined,
-        userId as string | undefined
+        userId as string | undefined,
+        undefined, // authorId
+        undefined, // sortBy
+        limit
       );
 
       return result;
@@ -143,6 +133,8 @@ export class PostController implements IfeedController {
       const pageParam = req.query?.cursor as string | undefined;
       const userId = req.query?.userId as string | undefined;
       const authorId = req.query?.authorId as string | undefined; // Get authorId from query
+      const sortBy = req.query?.sortBy as string | undefined; // Get sortBy from query
+      const limit = req.query?.limit ? parseInt(req.query.limit as string, 10) : undefined; // Get limit from query
       
       // Get userId from headers (set by API Gateway)
       const userIdFromHeader = req.headers["x-user-data"]
@@ -154,14 +146,18 @@ export class PostController implements IfeedController {
       logger.info("Fetching posts", {
         pageParam,
         finalUserId,
-        authorId
+        authorId,
+        sortBy,
+        limit
       });
 
       // Call service directly to support authorId (bypassing strict gRPC request type)
       const response = await this._postService.getPosts(
         pageParam,
         finalUserId,
-        authorId
+        authorId,
+        sortBy,
+        limit
       );
 
       logger.info("Posts fetched successfully", {
@@ -229,6 +225,102 @@ export class PostController implements IfeedController {
         error: err.message,
         stack: err.stack,
         postId: req.body?.Id || req.body?.postId,
+      });
+      const statusCode = err.status || HttpStatus.INTERNAL_SERVER_ERROR;
+      sendErrorResponse(res, {
+        status: statusCode,
+        message: err.message || "Server error",
+      });
+    }
+  }
+
+  async editPostHttp(req: Request, res: Response): Promise<void> {
+    try {
+      const postId = req.params.postId as string;
+      if (!postId) {
+        return sendErrorResponse(res, {
+          status: HttpStatus.BAD_REQUEST,
+          message: "Post ID is required",
+        });
+      }
+
+      const userId = getUserIdFromRequest(req);
+      if (!userId) {
+        throw new CustomError(HttpStatus.UNAUTHORIZED, "Unauthorized");
+      }
+
+      // Extract idempotency key from headers (handle string | string[] | undefined)
+      const headerValue = req.headers["idempotency-key"];
+      // Use type assertion after ensuring value is properly extracted
+      const idempotencyKey = ((typeof headerValue === "string" ? headerValue : Array.isArray(headerValue) ? headerValue[0] : undefined) || `edit-${postId}-${Date.now()}`) as string;
+
+      logger.info("Editing post", {
+        postId,
+        userId,
+        idempotencyKey,
+        body: req.body,
+      });
+
+      const response = await this._postService.editPost({
+        postId,
+        userId,
+        content: req.body.content,
+        addAttachmentIds: req.body.addAttachmentIds,
+        removeAttachmentIds: req.body.removeAttachmentIds,
+        idempotencyKey,
+        visibility: req.body.visibility,
+        commentControl: req.body.commentControl,
+      });
+
+      logger.info("Post edited successfully", {
+        postId,
+        version: response.newVersionNumber,
+      });
+
+      res.status(HttpStatus.OK).json({
+        success: true,
+        data: response.post,
+      });
+    } catch (err: any) {
+      logger.error("Error in PATCH /api/v1/feed/posts/:postId", {
+        error: err.message,
+        stack: err.stack,
+        postId: req.params.postId,
+      });
+      const statusCode = err.status || HttpStatus.INTERNAL_SERVER_ERROR;
+      sendErrorResponse(res, {
+        status: statusCode,
+        message: err.message || "Server error",
+      });
+    }
+  }
+
+  async getPostByIdHttp(req: Request, res: Response): Promise<void> {
+    try {
+      const { postId } = req.params as { postId: string };
+      
+      if (!postId) {
+        return sendErrorResponse(res, {
+          status: HttpStatus.BAD_REQUEST,
+          message: "Post ID is required",
+        });
+      }
+
+      // Get requester userId from headers if available (for isLiked/isShared)
+      const userIdFromHeader = req.headers["x-user-data"]
+        ? JSON.parse(req.headers["x-user-data"] as string)?.id
+        : undefined;
+
+      const response = await this._postService.getPostById(postId, userIdFromHeader);
+
+      res.status(HttpStatus.OK).json({
+        success: true,
+        data: response,
+      });
+    } catch (err: any) {
+      logger.error("Error in GET /api/v1/posts/:postId", {
+        error: err.message,
+        postId: req.params.postId,
       });
       const statusCode = err.status || HttpStatus.INTERNAL_SERVER_ERROR;
       sendErrorResponse(res, {

@@ -6,7 +6,7 @@ import {
   CheckFollowResponse,
   UserServiceClient,
 } from "../../grpc/generated/user";
-import { posts } from ".prisma/client";
+import { posts } from "@prisma/client";
 import { IPostRepository } from "../../repositories/interface/IPostRepository";
 
 export interface PostMetadata {

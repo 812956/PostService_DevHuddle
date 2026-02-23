@@ -19,6 +19,10 @@ model Comment {
   editedAt        DateTime?
   version         Int              @default(1)
   likesCount      Int              @default(0)
+  reportsCount    Int              @default(0)
+  isHidden        Boolean          @default(false)
+  hiddenAt        DateTime?
+  hiddenReason    String?
   Comment         Comment?         @relation("CommentToComment", fields: [parentCommentId], references: [id])
   other_Comment   Comment[]        @relation("CommentToComment")
   posts           posts            @relation(fields: [postId], references: [id], onDelete: Cascade)
@@ -312,7 +316,7 @@ model posts {
 enum CommentControl {
   ANYONE
   CONNECTIONS
-  NONE
+  NOBODY
 }
 
 enum HttpMethod {
@@ -439,5 +443,5 @@ enum TargetType {
 
 enum Visibility {
   PUBLIC
-  VISIBILITY_CONNECTIONS
+  CONNECTIONS
 }

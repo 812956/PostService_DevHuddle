@@ -6,6 +6,7 @@ import { IOutboxService } from "../interfaces/IOutboxService";
 import { CustomError } from "../../utils/error.util";
 import logger from "../../utils/logger.util";
 import * as grpc from "@grpc/grpc-js";
+import { HttpStatus } from "../../constands/http.status";
 import { KAFKA_TOPICS } from "../../config/kafka.config";
 import {
   OutboxAggregateType,
@@ -16,6 +17,7 @@ import {
   ReportStatus,
 } from "@prisma/client";
 import redisClient from "../../config/redis.config";
+import { adminServiceClient } from "../../clients/admin.client";
 
 export class ReportService implements IReportService {
   constructor(
@@ -33,56 +35,38 @@ export class ReportService implements IReportService {
     description?: string
   ): Promise<any> {
     try {
-      // 1. Rate limiting: Check if user has exceeded daily limit (5 reports per day)
-      const rateLimitKey = `report:user:${reporterId}:count`;
-      const reportCount = await redisClient.incr(rateLimitKey);
-      if (reportCount === 1) {
-        await redisClient.expire(rateLimitKey, 86400); // 24 hours
-      }
-      if (reportCount > 5) {
-        throw new CustomError(
-          grpc.status.RESOURCE_EXHAUSTED,
-          "Daily report limit exceeded. Maximum 5 reports per day."
-        );
+      // 1. Rate limiting
+      const today = new Date().toISOString().split('T')[0];
+      const rateLimitKey = `report:limit:${reporterId}:${today}`;
+      const reportCountValue = await redisClient.get(rateLimitKey);
+      const reportCount = reportCountValue ? parseInt(reportCountValue) : 0;
+
+      if (reportCount >= 5) {
+        throw new CustomError(HttpStatus.BAD_REQUEST, "Daily report limit reached");
       }
 
-      // 2. Validate post exists
+      // 2. Local Validation
       const post = await this._postRepository.findPost(postId);
-      if (!post) {
-        throw new CustomError(grpc.status.NOT_FOUND, "Post not found");
-      }
+      if (!post) throw new CustomError(HttpStatus.NOT_FOUND, "Post not found");
+      if (post.userId === reporterId) throw new CustomError(HttpStatus.FORBIDDEN, "Cannot report own post");
 
-      // 3. Validate reason
-      if (!Object.values(ReportReason).includes(reason as ReportReason)) {
-        throw new CustomError(
-          grpc.status.INVALID_ARGUMENT,
-          "Invalid report reason"
-        );
-      }
-
-      // 4. Check if already reported (idempotency)
-      const existingReport = await this._reportRepository.findReport(
+      // 3. Centralized Ingestion: Forward to Admin Hub
+      logger.info("Forwarding post report to Admin Hub", { reporterId, postId });
+      const adminResponse: any = await adminServiceClient.submitReport({
         reporterId,
-        ReportTargetType.POST,
-        postId
-      );
-      if (existingReport) {
-        throw new CustomError(
-          grpc.status.ALREADY_EXISTS,
-          "Post already reported by this user"
-        );
+        targetId: postId,
+        targetType: "POST",
+        reason,
+        description: description || "",
+        metadata: JSON.stringify(metadata || {}),
+      });
+
+      if (!adminResponse.success) {
+        throw new CustomError(HttpStatus.SERVICE_UNAVAILABLE, adminResponse.message);
       }
 
-      // 5. Get current report count to determine severity
-      const currentReportCount = await this._reportRepository.getReportCount(
-        ReportTargetType.POST,
-        postId
-      );
-
-      // 6. Calculate severity based on report count and reason
-      const severity = this.calculateSeverity(reason as ReportReason, currentReportCount);
-
-      // 7. Create report with severity
+      // 4. Local Side-effects: Audit and Counters
+      const severity = this.calculateSeverity(reason as ReportReason, post.reportsCount);
       const report = await this._reportRepository.createReport({
         reporterId,
         targetType: ReportTargetType.POST,
@@ -95,21 +79,11 @@ export class ReportService implements IReportService {
         status: ReportStatus.PENDING,
       });
 
-      // 8. Update post reports counter
       await this._postRepository.incrementReportsCount(postId);
+      await redisClient.incr(rateLimitKey);
+      await redisClient.expire(rateLimitKey, 86400);
 
-      // 9. Check escalation rules (auto-hide if too many reports)
-      const newReportCount = currentReportCount + 1;
-      if (newReportCount >= 10) {
-        // Auto-hide post if 10+ reports
-        await this._postRepository.updatePost(postId, {
-          isHidden: true,
-          hiddenAt: new Date(),
-          hiddenReason: "Multiple reports received",
-        });
-      }
-
-      // 10. Create outbox event
+      // 5. Local Outbox Event for internal analytics
       await this._outboxService.createOutboxEvent({
         aggregateType: OutboxAggregateType.REPORT,
         aggregateId: report.id,
@@ -118,69 +92,24 @@ export class ReportService implements IReportService {
         key: postId,
         payload: {
           reportId: report.id,
+          adminHubReportId: adminResponse.reportId,
           postId,
           reporterId,
           postAuthorId: post.userId,
           reason,
           severity,
-          reportCount: newReportCount,
           description,
-          metadata,
         },
-      });
-
-      logger.info(`Post ${postId} reported by user ${reporterId}`, {
-        reportId: report.id,
-        reason,
-        severity,
-        reportCount: newReportCount,
       });
 
       return report;
     } catch (err: any) {
-      logger.error("Error reporting post", {
-        error: err.message,
-        postId,
-        reporterId,
-        reason,
-      });
-      throw err instanceof CustomError
-        ? err
-        : new CustomError(grpc.status.INTERNAL, "Failed to report post");
+      logger.error("Error reporting post", { error: err.message, postId });
+      if (err instanceof CustomError) throw err;
+      throw new CustomError(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to report post");
     }
   }
 
-  private calculateSeverity(
-    reason: ReportReason,
-    currentReportCount: number
-  ): ReportSeverity {
-    // Critical reasons
-    if (
-      reason === ReportReason.VIOLENCE ||
-      reason === ReportReason.SELF_HARM ||
-      reason === ReportReason.HATE_SPEECH
-    ) {
-      return ReportSeverity.CRITICAL;
-    }
-
-    // High severity reasons
-    if (reason === ReportReason.HARASSMENT) {
-      return ReportSeverity.HIGH;
-    }
-
-    // Medium severity with multiple reports
-    if (currentReportCount >= 5) {
-      return ReportSeverity.HIGH;
-    }
-
-    if (currentReportCount >= 3) {
-      return ReportSeverity.MEDIUM;
-    }
-
-    // Default to low
-    return ReportSeverity.LOW;
-  }
-  
   async reportComment(
     commentId: string,
     reporterId: string,
@@ -188,124 +117,86 @@ export class ReportService implements IReportService {
     metadata?: any
   ): Promise<any> {
     try {
-      // Validate comment exists
+      // 1. Local Validation
       const comment = await this._commentRepository.findComment(commentId);
-      if (!comment) {
-        throw new CustomError(grpc.status.NOT_FOUND, "Comment not found");
-      }
+      if (!comment) throw new CustomError(HttpStatus.NOT_FOUND, "Comment not found");
+      if (comment.userId === reporterId) throw new CustomError(HttpStatus.FORBIDDEN, "Cannot report own comment");
 
-      // Validate reason
-      if (!Object.values(ReportReason).includes(reason as ReportReason)) {
-        throw new CustomError(
-          grpc.status.INVALID_ARGUMENT,
-          "Invalid report reason"
-        );
-      }
-
-      // Check if already reported
-      const existingReport = await this._reportRepository.findReport(
+      // 2. Centralized Ingestion: Forward to Admin Hub
+      logger.info("Forwarding comment report to Admin Hub", { reporterId, commentId });
+      const adminResponse: any = await adminServiceClient.submitReport({
         reporterId,
-        ReportTargetType.COMMENT,
-        commentId
-      );
-      if (existingReport) {
-        throw new CustomError(
-          grpc.status.ALREADY_EXISTS,
-          "Comment already reported by this user"
-        );
+        targetId: commentId,
+        targetType: "COMMENT",
+        reason,
+        description: "",
+        metadata: JSON.stringify(metadata || {}),
+      });
+
+      if (!adminResponse.success) {
+        throw new CustomError(HttpStatus.SERVICE_UNAVAILABLE, adminResponse.message);
       }
 
-      // Create report
+      // 3. Local Audit and Counters
+      const currentCount = (comment.reportsCount || 0) + 1;
+      const severity = this.calculateSeverity(reason as ReportReason, currentCount);
+      
       const report = await this._reportRepository.createReport({
         reporterId,
         targetType: ReportTargetType.COMMENT,
         targetId: commentId,
-        postId: comment.postId, // Required for cascade
+        postId: comment.postId,
         commentId,
         reason: reason as ReportReason,
+        severity,
         metadata: metadata || {},
+        status: ReportStatus.PENDING,
       });
 
-      // Create outbox event
+      await this._commentRepository.updateComment(commentId, { reportsCount: currentCount });
+
+      // 4. Local Outbox Event
       await this._outboxService.createOutboxEvent({
         aggregateType: OutboxAggregateType.REPORT,
         aggregateId: report.id,
-        type: OutboxEventType.POST_REPORT_CREATED, 
-        topic: KAFKA_TOPICS.POST_REPORTED, 
+        type: OutboxEventType.POST_REPORT_CREATED,
+        topic: KAFKA_TOPICS.POST_REPORTED,
         key: commentId,
         payload: {
           reportId: report.id,
+          adminHubReportId: adminResponse.reportId,
           commentId,
           postId: comment.postId,
           reporterId,
           commentAuthorId: comment.userId,
           reason,
-          metadata,
         },
-      });
-
-      logger.info(`Comment ${commentId} reported by user ${reporterId}`, {
-        reportId: report.id,
-        reason,
       });
 
       return report;
     } catch (err: any) {
-      logger.error("Error reporting comment", {
-        error: err.message,
-        commentId,
-        reporterId,
-        reason,
-      });
-      throw err instanceof CustomError
-        ? err
-        : new CustomError(grpc.status.INTERNAL, "Failed to report comment");
+      logger.error("Error reporting comment", { error: err.message, commentId });
+      if (err instanceof CustomError) throw err;
+      throw new CustomError(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to report comment");
     }
   }
 
-  async getReportCount(
-    targetType: string,
-    targetId: string
-  ): Promise<number> {
-    try {
-      return await this._reportRepository.getReportCount(
-        targetType as ReportTargetType,
-        targetId
-      );
-    } catch (err: any) {
-      logger.error("Error getting report count", {
-        error: err.message,
-        targetType,
-        targetId,
-      });
-      throw new CustomError(
-        grpc.status.INTERNAL,
-        "Failed to get report count"
-      );
+  private calculateSeverity(reason: ReportReason, count: number): ReportSeverity {
+    const criticalReasons: ReportReason[] = [ReportReason.VIOLENCE, ReportReason.SELF_HARM, ReportReason.HATE_SPEECH];
+    if (criticalReasons.includes(reason)) {
+      return ReportSeverity.CRITICAL;
     }
+    if (reason === ReportReason.HARASSMENT || count >= 10) return ReportSeverity.HIGH;
+    if (count >= 5) return ReportSeverity.MEDIUM;
+    return ReportSeverity.LOW;
+  }
+
+  async getReportCount(targetType: string, targetId: string): Promise<number> {
+    return this._reportRepository.getReportCount(targetType as ReportTargetType, targetId);
   }
   
-  async hasReported(
-    targetType: string,
-    targetId: string,
-    reporterId: string
-  ): Promise<boolean> {
-    try {
-      const report = await this._reportRepository.findReport(
-        reporterId,
-        targetType as ReportTargetType,
-        targetId
-      );
-      return !!report;
-    } catch (err: any) {
-      logger.error("Error checking report status", {
-        error: err.message,
-        targetType,
-        targetId,
-        reporterId,
-      });
-      return false;
-    }
+  async hasReported(targetType: string, targetId: string, reporterId: string): Promise<boolean> {
+    const report = await this._reportRepository.findReport(reporterId, targetType as ReportTargetType, targetId);
+    return !!report;
   }
-
 }

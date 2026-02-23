@@ -3,13 +3,52 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-const winston_1 = __importDefault(require("winston"));
-const logger = winston_1.default.createLogger({
-    level: process.env.LOG_LEVEL,
-    format: winston_1.default.format.combine(winston_1.default.format.timestamp(), winston_1.default.format.json()),
-    transports: [
-        new winston_1.default.transports.Console(),
-        new winston_1.default.transports.File({ filename: 'logs/auth-service.log' })
-    ]
+const pino_1 = __importDefault(require("pino"));
+// Create base Pino logger
+const pinoLogger = (0, pino_1.default)({
+    level: process.env.LOG_LEVEL || 'info',
+    transport: process.env.NODE_ENV !== 'production' ? {
+        target: 'pino-pretty',
+        options: {
+            colorize: true,
+            translateTime: 'HH:MM:ss Z',
+            ignore: 'pid,hostname',
+        },
+    } : undefined,
 });
+// Wrapper to maintain Winston-like API compatibility
+const logger = {
+    info: (message, meta) => {
+        if (meta) {
+            pinoLogger.info(meta, message);
+        }
+        else {
+            pinoLogger.info(message);
+        }
+    },
+    error: (message, meta) => {
+        if (meta) {
+            pinoLogger.error(meta, message);
+        }
+        else {
+            pinoLogger.error(message);
+        }
+    },
+    warn: (message, meta) => {
+        if (meta) {
+            pinoLogger.warn(meta, message);
+        }
+        else {
+            pinoLogger.warn(message);
+        }
+    },
+    debug: (message, meta) => {
+        if (meta) {
+            pinoLogger.debug(meta, message);
+        }
+        else {
+            pinoLogger.debug(message);
+        }
+    },
+};
 exports.default = logger;

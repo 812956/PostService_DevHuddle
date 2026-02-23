@@ -13,6 +13,7 @@ import {
   OutboxEventType,
   ReactionTargetType,
 } from "@prisma/client";
+import { userClient } from "../../config/grpc.client";
 
 export class LikeService implements ILikeService {
   constructor(
@@ -38,6 +39,41 @@ export class LikeService implements ILikeService {
 
   async getPostLikeCount(postId: string): Promise<number> {
     return this._getLikeCountInternal(ReactionTargetType.POST, postId);
+  }
+
+  async getPostLikesUsers(postId: string, limit: number = 10, page: number = 1): Promise<{ users: any[], totalCount: number, hasMore: boolean }> {
+    const skip = (page - 1) * limit;
+    
+    // Get all likes for the post
+    const reactions = await this._likeRepository.getLikes(ReactionTargetType.POST, postId, limit, skip);
+    const totalCount = await this.getPostLikeCount(postId);
+    const hasMore = totalCount > skip + limit;
+
+    const users = await Promise.all(
+      reactions.map(async (reaction) => {
+        return new Promise((resolve) => {
+          userClient.getUserForFeedListing({ userId: reaction.userId }, (err, response) => {
+            if (!err && response) {
+              resolve({
+                id: reaction.userId,
+                name: response.name,
+                username: response.username,
+                avatar: response.avatar,
+              });
+            } else {
+              resolve({
+                id: reaction.userId,
+                name: "Unknown",
+                username: "unknown",
+                avatar: "",
+              });
+            }
+          });
+        });
+      })
+    );
+
+    return { users, totalCount, hasMore };
   }
 
   // ========== PUBLIC METHODS - COMMENT LIKES (Explicit API) ==========

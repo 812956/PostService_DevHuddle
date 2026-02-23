@@ -5,6 +5,7 @@ import { IOutboxService } from "../interfaces/IOutboxService";
 import { CustomError } from "../../utils/error.util";
 import logger from "../../utils/logger.util";
 import * as grpc from "@grpc/grpc-js";
+import { HttpStatus } from "../../constands/http.status";
 import { RedisCacheService } from "../../utils/redis.util";
 import { KAFKA_TOPICS } from "../../config/kafka.config";
 import {
@@ -36,7 +37,7 @@ export class ShareService implements IShareService {
       // 1. Validate post exists
       const post = await this._postRepository.findPost(postId);
       if (!post) {
-        throw new CustomError(grpc.status.NOT_FOUND, "Post not found");
+        throw new CustomError(HttpStatus.NOT_FOUND, "Post not found");
       }
 
       // 2. Permission check - can user share this?
@@ -52,7 +53,7 @@ export class ShareService implements IShareService {
       ];
       if (!validShareTypes.includes(shareType as ShareType)) {
         throw new CustomError(
-          grpc.status.INVALID_ARGUMENT,
+          HttpStatus.BAD_REQUEST,
           "Invalid share type"
         );
       }
@@ -69,7 +70,7 @@ export class ShareService implements IShareService {
         sanitizedCaption = sanitizeInput(caption);
         if (!validateContentLength(sanitizedCaption, 1000)) {
           throw new CustomError(
-            grpc.status.INVALID_ARGUMENT,
+            HttpStatus.BAD_REQUEST,
             "Caption too long (max 1000 characters)"
           );
         }
@@ -82,7 +83,7 @@ export class ShareService implements IShareService {
       if (shareType === ShareType.PRIVATE_MESSAGE) {
         if (!sharedToUserId) {
           throw new CustomError(
-            grpc.status.INVALID_ARGUMENT,
+            HttpStatus.BAD_REQUEST,
             "sharedToUserId is required for PRIVATE_MESSAGE"
           );
         }
@@ -127,6 +128,11 @@ export class ShareService implements IShareService {
           visibility: effectiveVisibility,
           sharedToUserId: finalTargetId,
           caption: sanitizedCaption,
+          // Notifications consistency
+          senderId: userId,
+          recipientId: post.userId, // Notify original author
+          action: "POST_SHARED",
+          version: Date.now(),
         },
       });
 
@@ -146,7 +152,7 @@ export class ShareService implements IShareService {
       });
       throw err instanceof CustomError
         ? err
-        : new CustomError(grpc.status.INTERNAL, "Failed to share post");
+        : new CustomError(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to share post");
     }
   }
 
@@ -159,18 +165,18 @@ export class ShareService implements IShareService {
     // Can't share if original author disabled sharing
     if (post.sharingDisabled) {
       throw new CustomError(
-        grpc.status.PERMISSION_DENIED,
+        HttpStatus.FORBIDDEN,
         "Sharing disabled for this post"
       );
     }
 
     // Can't share private post publicly
     if (
-      post.visibility === "VISIBILITY_CONNECTIONS" &&
-      requestedVisibility === "PUBLIC"
+      post.visibility === Visibility.CONNECTIONS &&
+      requestedVisibility === Visibility.PUBLIC
     ) {
       throw new CustomError(
-        grpc.status.PERMISSION_DENIED,
+        HttpStatus.FORBIDDEN,
         "Cannot share private post publicly"
       );
     }
@@ -181,9 +187,9 @@ export class ShareService implements IShareService {
     requestedVisibility: Visibility
   ): Visibility {
     // Share visibility cannot be more permissive than original
-    const visibilityHierarchy = {
-      VISIBILITY_CONNECTIONS: 0,
-      PUBLIC: 1,
+    const visibilityHierarchy: { [key in Visibility]: number } = {
+      [Visibility.CONNECTIONS]: 0,
+      [Visibility.PUBLIC]: 1,
     };
 
     const originalLevel = visibilityHierarchy[originalVisibility] ?? 0;
@@ -217,7 +223,7 @@ export class ShareService implements IShareService {
         postId,
       });
       throw new CustomError(
-        grpc.status.INTERNAL,
+        HttpStatus.INTERNAL_SERVER_ERROR,
         "Failed to get share count"
       );
     }

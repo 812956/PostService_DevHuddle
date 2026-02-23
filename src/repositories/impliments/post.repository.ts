@@ -6,7 +6,7 @@ import { BaseRepository } from "./base.repository";
 import { prisma } from "../../config/prisma.config";
 import logger from "../../utils/logger.util";
 import redisClient from "../../config/redis.config";
-import { posts, Prisma, Media } from ".prisma/client";
+import { posts, Prisma, Media } from "@prisma/client";
 
 import { userClient } from "../../config/grpc.client";
 import {
@@ -162,6 +162,25 @@ export class PostRepository
       return post;
     } catch (error: unknown) {
       logger.error("Error find entity", {
+        error: (error as Error).message,
+      });
+      throw new Error("Database error");
+    }
+  }
+
+  async findPostWithMedia(postId: string): Promise<any> {
+    try {
+      const post = await prisma.posts.findUnique({
+        where: {
+          id: postId,
+        },
+        include: {
+          Media: true,
+        },
+      });
+      return post;
+    } catch (error: unknown) {
+      logger.error("Error find entity with media", {
         error: (error as Error).message,
       });
       throw new Error("Database error");
@@ -601,6 +620,67 @@ export class PostRepository
     } catch (error: unknown) {
       logger.error("Error counting newer posts", {
         error: (error as Error).message,
+      });
+      throw new Error("Database error");
+    }
+  }
+
+  async hideAllPostsByUser(userId: string, reason: string): Promise<void> {
+    try {
+      await prisma.posts.updateMany({
+        where: { userId, deletedAt: null },
+        data: { isHidden: true, hiddenAt: new Date(), hiddenReason: reason },
+      });
+    } catch (error: unknown) {
+      logger.error("Error hiding all posts by user", {
+        error: (error as Error).message,
+        userId,
+      });
+      throw new Error("Database error");
+    }
+  }
+
+  async unhideAllPostsByUser(userId: string): Promise<void> {
+    try {
+      await prisma.posts.updateMany({
+        where: { userId, deletedAt: null },
+        data: { isHidden: false, hiddenAt: null, hiddenReason: null },
+      });
+    } catch (error: unknown) {
+      logger.error("Error unhiding all posts by user", {
+        error: (error as Error).message,
+        userId,
+      });
+      throw new Error("Database error");
+    }
+  }
+
+  async hidePost(postId: string, reason: string): Promise<void> {
+    try {
+      await prisma.posts.update({
+        where: { id: postId },
+        data: { isHidden: true, hiddenAt: new Date(), hiddenReason: reason },
+      });
+    } catch (error: unknown) {
+      logger.error("Error hiding post", {
+        error: (error as Error).message,
+        postId,
+      });
+      throw new Error("Database error");
+    }
+  }
+
+  async deleteAllPostsByUser(userId: string): Promise<void> {
+    try {
+      // Hard delete all posts by user (cascading deletes for Media and PostVersions should be handled by DB or manually)
+      // Check schema for cascade rules.
+      await prisma.posts.deleteMany({
+        where: { userId },
+      });
+    } catch (error: unknown) {
+      logger.error("Error deleting all posts by user", {
+        error: (error as Error).message,
+        userId,
       });
       throw new Error("Database error");
     }

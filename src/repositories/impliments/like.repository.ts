@@ -1,7 +1,7 @@
 import { ILikeRepository, CreateLikeData } from "../interface/ILikeRepository";
 import { BaseRepository } from "./base.repository";
 import { prisma } from "../../config/prisma.config";
-import { Reaction, Prisma, ReactionTargetType } from ".prisma/client";
+import { Reaction, Prisma, ReactionTargetType } from "@prisma/client";
 import logger from "../../utils/logger.util";
 import { v4 as uuidv4 } from "uuid";
 
@@ -191,7 +191,8 @@ export class LikeRepository
   async getLikes(
     targetType: ReactionTargetType,
     targetId: string,
-    limit: number = 50
+    limit: number = 50,
+    skip: number = 0
   ): Promise<Reaction[]> {
     try {
       const whereClause: any = {
@@ -208,6 +209,7 @@ export class LikeRepository
       return await prisma.reaction.findMany({
         where: whereClause,
         take: limit,
+        skip: skip,
         orderBy: {
           createdAt: "desc",
         },

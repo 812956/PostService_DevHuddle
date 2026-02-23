@@ -12,7 +12,7 @@ import { RedisCacheService } from "../../utils/redis.util";
 import { KAFKA_TOPICS } from "../../config/kafka.config";
 import {
   Comment,
-  CommentControl,
+  CommentControl as PrismaCommentControl,
   OutboxAggregateType,
   OutboxEventType,
 } from "@prisma/client";
@@ -69,20 +69,33 @@ export class CommentService implements ICommentService {
         throw new CustomError(HttpStatus.NOT_FOUND, "Post not found");
       }
 
-      if (post.commentControl === CommentControl.NONE) {
+      console.log("[DEBUG] createComment Check:", {
+        postId,
+        userId,
+        postUserId: post.userId,
+        commentControl: post.commentControl,
+        PrismaNOBODY: PrismaCommentControl.NOBODY,
+        isNobody: post.commentControl === PrismaCommentControl.NOBODY,
+        isAuthor: userId === post.userId
+      });
+
+      if (post.commentControl === PrismaCommentControl.NOBODY) {
         throw new CustomError(
           HttpStatus.FORBIDDEN,
           "Comments are disabled for this post"
         );
       }
 
-      if (post.commentControl === CommentControl.CONNECTIONS) {
-        const isFollowing = await this._checkFollow(userId, post.userId);
-        if (!isFollowing) {
-          throw new CustomError(
-            HttpStatus.FORBIDDEN,
-            "You are not following the post author"
-          );
+      if (post.commentControl === PrismaCommentControl.CONNECTIONS) {
+        // Author can always comment
+        if (userId !== post.userId) {
+          const isFollowing = await this._checkFollow(userId, post.userId);
+          if (!isFollowing) {
+            throw new CustomError(
+              HttpStatus.FORBIDDEN,
+              "You are not following the post author"
+            );
+          }
         }
       }
 
@@ -230,10 +243,14 @@ export class CommentService implements ICommentService {
         );
       }
 
-      // Update comment (editedAt is automatically set by repository)
+      // Update comment
       const updatedComment = await this._commentRepository.updateComment(
         commentId,
-        sanitizedContent
+        {
+          content: sanitizedContent,
+          editedAt: new Date(),
+          version: { increment: 1 },
+        }
       );
 
       // Process mentions in updated content

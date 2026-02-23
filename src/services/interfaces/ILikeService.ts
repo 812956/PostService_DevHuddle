@@ -4,6 +4,7 @@ export interface ILikeService {
   unlikePost(postId: string, userId: string): Promise<void>;
   isPostLiked(postId: string, userId: string): Promise<boolean>;
   getPostLikeCount(postId: string): Promise<number>;
+  getPostLikesUsers(postId: string, limit?: number, page?: number): Promise<{ users: any[], totalCount: number, hasMore: boolean }>;
 
   // Comment Likes
   likeComment(commentId: string, userId: string): Promise<void>;
