@@ -1,5 +1,4 @@
-
-
+import "reflect-metadata";
 import compression from "compression";
 import dotenv from "dotenv";
 import express, { Express, NextFunction, Request, Response } from "express";
@@ -20,6 +19,8 @@ import { MentionRepository } from "./repositories/impliments/mention.repository"
 import { OutboxRepository } from "./repositories/impliments/outbox.repository";
 import { IdempotencyRepository } from "./repositories/impliments/idempotency.repository";
 import { ShareLinkRepository } from "./repositories/impliments/shareLink.repository";
+import { FeedRepository } from "./repositories/impliments/feed.repository";
+import { ShareRepository } from "./repositories/impliments/share.repository";
 
 // Import services
 import { LikeService } from "./services/impliments/like.service";
@@ -28,6 +29,9 @@ import { ReportService } from "./services/impliments/report.service";
 import { OutboxService } from "./services/impliments/outbox.service";
 import { MentionService } from "./services/impliments/mention.service";
 import { ShareLinkService } from "./services/impliments/shareLink.service";
+import { FeedRankingService } from "./services/impliments/feed-ranking.service";
+import { FeedService } from "./services/impliments/feed.service";
+import { ShareService } from "./services/impliments/share.service";
 
 // Import controllers
 import { LikeController } from "./controllers/impliments/like.controller";
@@ -52,6 +56,14 @@ app.use(compression());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
+app.use((req: Request, res: Response, next: NextFunction) => {
+  logger.info(`Incoming ${req.method} ${req.url}`, {
+    headers: {
+      "x-user-data": req.headers["x-user-data"] ? "present" : "absent"
+    }
+  });
+  next();
+});
 
 // Initialize repositories
 const likeRepository = new LikeRepository();
@@ -62,27 +74,42 @@ const mentionRepository = new MentionRepository();
 const outboxRepository = new OutboxRepository();
 const idempotencyRepository = new IdempotencyRepository();
 const shareLinkRepository = new ShareLinkRepository();
+const feedRepository = new FeedRepository();
+const shareRepository = new ShareRepository();
 
 // Initialize services
 const outboxService = new OutboxService(outboxRepository);
 const outboxProcessor = new OutboxProcessor(outboxRepository);
 const mentionService = new MentionService(mentionRepository, outboxService);
+
+const feedRankingService = new FeedRankingService(postRepository);
+const feedService = new FeedService(feedRepository, feedRankingService, postRepository);
+
 const likeService = new LikeService(
   likeRepository,
   postRepository,
   commentRepository,
-  outboxService
+  outboxService,
+  feedService
 );
 const commentService = new CommentService(
   commentRepository,
   postRepository,
   mentionService,
   outboxService,
-  likeRepository
+  likeRepository,
+  feedService
 );
 const sendService = new SendService(
   postRepository,
-  outboxService
+  outboxService,
+  feedService
+);
+const shareService = new ShareService(
+  shareRepository,
+  postRepository,
+  outboxService,
+  feedService
 );
 const reportService = new ReportService(
   reportRepository,
@@ -117,9 +144,21 @@ const engagementRouter = setupEngagementRoutes(
   idempotencyRepository
 );
 
-app.use("/", engagementRouter);
-app.use("/admin", adminRouter);
-app.use("/posts", feedRouter);
+app.use((req: Request, res: Response, next: NextFunction) => {
+  console.log(`>>> POST_BUILD_V13 <<<`);
+  console.log(`POST_INBOUND: ${req.method} ${req.url}`);
+  next();
+});
+
+app.use((req: Request, res: Response, next: NextFunction) => {
+  console.log(`>>> POST_BUILD_V13 <<<`);
+  console.log(`POST_INBOUND: ${req.method} ${req.url}`);
+  next();
+});
+
+app.use("/api/v1/engagement", engagementRouter);
+app.use("/api/v1/admin", adminRouter);
+app.use(["/api/v1/feed", "/api/v1/posts", "/posts"], feedRouter);
 
 app.get("/health", (req: Request, res: Response) => {
   res.status(200).json({ status: "Post service is running" });
